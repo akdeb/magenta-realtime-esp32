@@ -94,6 +94,9 @@ static BOOL isDevServerRunning(void) {
     NSString* _modelName;
     NSString* _currentPromptText;
     BOOL _isPlaying;
+    BOOL _modelIsLoading;
+    BOOL _modelReady;
+    NSArray* _pendingPromptPayload;
 }
 
 // ─── Parameter bridging ──────────────────────────────────────────────────────
@@ -108,6 +111,44 @@ static BOOL isDevServerRunning(void) {
 
 - (float)readParamFromEngine:(int)address {
     return [MagentaSettings readParamFromEngine:self.engine address:address];
+}
+
+- (void)setModelLoading:(BOOL)loading {
+    dispatch_async(dispatch_get_main_queue(), ^{
+        self->_modelIsLoading = loading;
+        if (loading) {
+            self->_modelReady = NO;
+            [self sendStateUpdate:@{@"modelName": @"Loading model..."}];
+        }
+    });
+}
+
+- (void)applyPromptPayload:(NSArray*)promptsArray persist:(BOOL)persist {
+    if (![promptsArray isKindOfClass:[NSArray class]] || !self.engine || !_modelReady || _modelIsLoading) {
+        _pendingPromptPayload = promptsArray;
+        return;
+    }
+
+    std::vector<std::string> texts;
+    std::vector<float> weights;
+    for (NSDictionary* p in promptsArray) {
+        NSString* text = p[@"text"];
+        NSNumber* weight = p[@"weight"];
+        if ([text isKindOfClass:[NSString class]] && [weight isKindOfClass:[NSNumber class]]) {
+            texts.push_back(text.UTF8String);
+            weights.push_back(weight.floatValue);
+        }
+    }
+    if (texts.empty()) return;
+
+    self.engine->set_text_prompts(texts, weights);
+    self.engine->set_blend_weights(weights.data(), (int)weights.size());
+
+    if (persist) {
+        NSString* prompt = [NSString stringWithUTF8String:texts[0].c_str()];
+        _currentPromptText = prompt;
+        [[NSUserDefaults standardUserDefaults] setObject:prompt forKey:@"Collider_Prompt"];
+    }
 }
 
 // ─── View lifecycle ──────────────────────────────────────────────────────────
@@ -269,6 +310,16 @@ static BOOL isDevServerRunning(void) {
     RealtimeRunner* engine = self.engine;
     if (!engine) return;
 
+    if (_modelIsLoading) {
+        [self sendStateUpdate:@{
+            @"isPlaying": @(_isPlaying),
+            @"modelName": @"Loading model...",
+            @"resourcesMissing": @(![MagentaModelDownloader areSharedResourcesValid])
+        }];
+        [self handleListLocalModels];
+        return;
+    }
+
     NSMutableDictionary* initialParams = [NSMutableDictionary dictionary];
     int addresses[] = {0,1,3,4,5,6,7,8,9,32,39,48};
     for (int addr : addresses) {
@@ -320,6 +371,8 @@ static BOOL isDevServerRunning(void) {
     _modelName = modelName;
 
     dispatch_async(dispatch_get_main_queue(), ^{
+        self->_modelIsLoading = NO;
+        self->_modelReady = YES;
         NSMutableDictionary* state = [NSMutableDictionary dictionary];
         state[@"modelName"] = modelName;
 
@@ -350,6 +403,12 @@ static BOOL isDevServerRunning(void) {
         }
 
         [self sendStateUpdate:state];
+
+        if (self->_pendingPromptPayload) {
+            NSArray* pending = self->_pendingPromptPayload;
+            self->_pendingPromptPayload = nil;
+            [self applyPromptPayload:pending persist:YES];
+        }
     });
 }
 
@@ -375,27 +434,7 @@ static BOOL isDevServerRunning(void) {
     }
     else if ([type isEqualToString:@"textPrompts"]) {
         NSArray* promptsArray = body[@"value"];
-        if ([promptsArray isKindOfClass:[NSArray class]] && self.engine) {
-            std::vector<std::string> texts;
-            std::vector<float> weights;
-            for (NSDictionary* p in promptsArray) {
-                NSString* text = p[@"text"];
-                NSNumber* weight = p[@"weight"];
-                if ([text isKindOfClass:[NSString class]] && [weight isKindOfClass:[NSNumber class]]) {
-                    texts.push_back(text.UTF8String);
-                    weights.push_back(weight.floatValue);
-                }
-            }
-            self.engine->set_text_prompts(texts, weights);
-            self.engine->set_blend_weights(weights.data(), (int)weights.size());
-
-            // Persist current prompt and history
-            if (texts.size() > 0) {
-                NSString* prompt = [NSString stringWithUTF8String:texts[0].c_str()];
-                _currentPromptText = prompt;
-                [[NSUserDefaults standardUserDefaults] setObject:prompt forKey:@"Collider_Prompt"];
-            }
-        }
+        [self applyPromptPayload:promptsArray persist:YES];
     }
     else if ([type isEqualToString:@"loadModel"]) {
         [self handleLoadModel];
@@ -528,9 +567,14 @@ static BOOL isDevServerRunning(void) {
     if (!engine) return;
 
     NSLog(@"Collider: Loading model from %@", mlxfnPath);
+    _modelIsLoading = YES;
+    _modelReady = NO;
+    [self sendStateUpdate:@{@"modelName": @"Loading model..."}];
     BOOL success = engine->load_model(mlxfnPath.UTF8String);
 
     if (success) {
+        _modelIsLoading = NO;
+        _modelReady = YES;
         self->_modelName = mlxfnPath.lastPathComponent;
 
         // Auto-load corpus
@@ -557,8 +601,16 @@ static BOOL isDevServerRunning(void) {
             @"prompt": promptToUse
         }];
 
+        if (_pendingPromptPayload) {
+            NSArray* pending = _pendingPromptPayload;
+            _pendingPromptPayload = nil;
+            [self applyPromptPayload:pending persist:YES];
+        }
+
         [[NSUserDefaults standardUserDefaults] setObject:mlxfnPath forKey:@"Collider_ModelPath"];
     } else {
+        _modelIsLoading = NO;
+        _modelReady = NO;
         [self sendStateUpdate:@{@"modelName": [NSString stringWithFormat:@"Failed: %@", mlxfnPath.lastPathComponent]}];
     }
 }

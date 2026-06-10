@@ -245,6 +245,7 @@ export function PromptSurface({
   physicsEnabled = true,
   active = true,
   collisions = false,
+  listenerImage,
 }: {
   prompts: PromptNode[];
   listener: ListenerNode;
@@ -263,6 +264,7 @@ export function PromptSurface({
   physicsEnabled?: boolean;
   active?: boolean;
   collisions?: boolean;
+  listenerImage?: string;
 }) {
   config.collisions = collisions;
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -616,7 +618,7 @@ export function PromptSurface({
   }, [onBallSelect, handlePointerMove, physicsEnabled, onPromptDelete, onFirstThrow]);
 
   const handleElementPointerDown = useCallback((
-    e: React.PointerEvent<SVGCircleElement>,
+    e: React.PointerEvent<SVGElement>,
     type: 'prompt' | 'listener',
     id?: number,
   ) => {
@@ -631,9 +633,11 @@ export function PromptSurface({
 
     // Compute grab offset so element doesn't snap to cursor center
     const grabPos = clientToStage(e.clientX, e.clientY);
-    const el = e.target as SVGCircleElement;
-    const elX = parseFloat(el.getAttribute('cx') || '0');
-    const elY = parseFloat(el.getAttribute('cy') || '0');
+    const center = type === 'listener'
+      ? listenerRef.current
+      : promptsRef.current.find(p => p.id === id);
+    const elX = center?.x ?? 0;
+    const elY = center?.y ?? 0;
 
     dragRef.current = {
       type, id,
@@ -723,7 +727,7 @@ export function PromptSurface({
         style={{ position: 'absolute', left: '16px', top: '50%', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', zIndex: 0 }}
       >
         <div className={`trash-zone-inner${isOverTrash ? ' over' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', borderRadius: '9999px', background: isOverTrash ? '#dc2626' : 'var(--color-raised)' }}>
-          <span className="material-icons" style={{ fontSize: '20px', color: 'var(--color-muted)' }}>delete_outline</span>
+          <span className="material-icons" style={{ fontSize: '20px', color: '#ffffff' }}>delete_outline</span>
         </div>
       </div>
 
@@ -791,6 +795,11 @@ export function PromptSurface({
           if (entry.type === 'listener') {
             return (
               <g key="listener">
+                {listenerImage && (
+                  <clipPath id="listener-image-clip">
+                    <circle cx={listener.x} cy={listener.y} r={config.listenerRadius} />
+                  </clipPath>
+                )}
                 <circle
                   className="draggable"
                   cx={listener.x}
@@ -799,6 +808,19 @@ export function PromptSurface({
                   fill="white"
                   onPointerDown={(e) => handleElementPointerDown(e, 'listener')}
                 />
+                {listenerImage && (
+                  <image
+                    className="draggable"
+                    href={listenerImage}
+                    x={listener.x - config.listenerRadius}
+                    y={listener.y - config.listenerRadius}
+                    width={config.listenerRadius * 2}
+                    height={config.listenerRadius * 2}
+                    preserveAspectRatio="xMidYMid slice"
+                    clipPath="url(#listener-image-clip)"
+                    onPointerDown={(e) => handleElementPointerDown(e, 'listener')}
+                  />
+                )}
                 {movingRef.current.has('listener') && (
                   <circle
                     className="hitbox draggable"

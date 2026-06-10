@@ -17,10 +17,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Turtle, Rabbit } from 'lucide-react';
 import IconButton from '@mui/material/IconButton';
-import TuneIcon from '@mui/icons-material/Tune';
+import Settings from '@mui/icons-material/Settings';
+import Replay from '@mui/icons-material/Replay';
 import Tooltip from '@mui/material/Tooltip';
-import { ModelSelector, SettingsPanel, TimingIndicator, AudioMeter, ResourceOnboardingModal, TransportControls, PromptSurface, calculateWeights, ALL_SUGGESTIONS, DEFAULT_TEMPERATURE, DEFAULT_TOPK, DEFAULT_CFG_MUSICCOCA, DEFAULT_CFG_DRUMS, DEFAULT_UNMASK_WIDTH, DEFAULT_BUFFER_SIZE, DEFAULT_VOLUME, COLLIDER_CFG_NOTES, COLLIDER_CFG_MUSICCOCA } from '@magenta-rt/common';
+import { ModelSelector, SettingsPanel, TimingIndicator, ResourceOnboardingModal, TransportControls, PromptSurface, calculateWeights, ALL_SUGGESTIONS, DEFAULT_TEMPERATURE, DEFAULT_TOPK, DEFAULT_CFG_MUSICCOCA, DEFAULT_CFG_DRUMS, DEFAULT_UNMASK_WIDTH, DEFAULT_BUFFER_SIZE, DEFAULT_VOLUME, COLLIDER_CFG_NOTES, COLLIDER_CFG_MUSICCOCA } from '@magenta-rt/common';
 import type { PromptNode, ListenerNode } from '@magenta-rt/common';
+import elatoLogoUrl from '../transparent-circle-logo.png';
 
 
 // ─── WebKit bridge ───────────────────────────────────────────────────────────
@@ -39,6 +41,35 @@ declare global {
 const post = (msg: any) => window.webkit?.messageHandlers?.auHost?.postMessage(msg);
 
 const MAX_ENGINE_PROMPTS = 6;
+
+const INSTRUMENTS = [
+  { icon: '1f3b7', name: 'Saxophone', prompt: 'Saxophone' },
+  { icon: '1fa97', name: 'Accordion', prompt: 'Accordion' },
+  { icon: '1f3b8', name: 'Guitar', prompt: 'Guitar' },
+  { icon: '1f3b9', name: 'Keyboard', prompt: 'Keyboard Piano' },
+  { icon: '1f3ba', name: 'Trumpet', prompt: 'Trumpet' },
+  { icon: '1fa8a', name: 'Trombone', prompt: 'Trombone' },
+  { icon: '1f3bb', name: 'Violin', prompt: 'Violin' },
+  { icon: '1fa95', name: 'Banjo', prompt: 'Banjo' },
+  { icon: '1f941', name: 'Drum', prompt: 'Drum Kit' },
+  { icon: '1fa98', name: 'Long Drum', prompt: 'Long Drum' },
+  { icon: '1fa87', name: 'Maracas', prompt: 'Maracas' },
+  { icon: '1fa88', name: 'Flute', prompt: 'Flute' },
+  { icon: '1fa89', name: 'Harp', prompt: 'Harp' },
+];
+
+const twemojiUrl = (codepoint: string) =>
+  `https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${codepoint}.svg`;
+
+type VoiceToolCall = {
+  tool: 'addBubble' | 'removeBubble';
+  params?: {
+    text?: string;
+    nearness?: number;
+  };
+};
+
+type VoiceStatus = 'idle' | 'listening' | 'processing' | 'thinking' | 'done' | 'error';
 
 // ─── Defaults ────────────────────────────────────────────────────────────────
 
@@ -99,6 +130,8 @@ function App() {
   const [selectedBallId, setSelectedBallId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speakerStreaming, setSpeakerStreaming] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>('idle');
+  const [voiceTranscript, setVoiceTranscript] = useState('');
   const [audioLevel, setAudioLevel] = useState(0);
   const [sliderPos, setSliderPos] = useState(0.5);
   const physicsSpeed = sliderToSpeed(sliderPos);
@@ -180,6 +213,43 @@ function App() {
   promptsRef.current = prompts;
   const listenerRef = useRef(listener);
   listenerRef.current = listener;
+
+  const applyVoiceToolCalls = useCallback((toolCalls: VoiceToolCall[]) => {
+    if (!Array.isArray(toolCalls) || toolCalls.length === 0) return;
+    setPrompts(prev => {
+      let next = [...prev];
+      for (const call of toolCalls) {
+        const text = (call.params?.text || '').trim();
+        if (!text) continue;
+
+        if (call.tool === 'removeBubble') {
+          const needle = text.toLowerCase();
+          next = next.filter(p => !p.label.toLowerCase().includes(needle));
+          continue;
+        }
+
+        if (call.tool === 'addBubble' && next.length < MAX_ENGINE_PROMPTS) {
+          const el = promptSurfaceRef.current;
+          const { width, height } = el?.getBoundingClientRect() || { width: 700, height: 420 };
+          const pad = 70;
+          const nearness = Math.max(0, Math.min(1, Number(call.params?.nearness ?? 0.7)));
+          const angle = Math.random() * Math.PI * 2;
+          const maxRadius = Math.max(80, Math.min(width, height) * 0.38);
+          const radius = 55 + (1 - nearness) * maxRadius;
+          const x = Math.max(pad, Math.min(width - pad, listenerRef.current.x + Math.cos(angle) * radius));
+          const y = Math.max(pad, Math.min(height - pad, listenerRef.current.y + Math.sin(angle) * radius));
+          next.push({
+            id: nextIdRef.current++,
+            x,
+            y,
+            label: text,
+            colorIndex: nextColorRef.current++,
+          });
+        }
+      }
+      return next;
+    });
+  }, []);
 
   // ─── Bridge: send prompts + weights to native ──────────────────────
 
@@ -270,6 +340,12 @@ function App() {
       if (state.speakerStreaming !== undefined) {
         setSpeakerStreaming(!!state.speakerStreaming);
       }
+      if (state.voiceStatus !== undefined) {
+        setVoiceStatus(state.voiceStatus);
+      }
+      if (state.voiceTranscript !== undefined) {
+        setVoiceTranscript(state.voiceTranscript || '');
+      }
       if (state.audioLevel !== undefined) {
         setAudioLevel(state.audioLevel);
       }
@@ -317,6 +393,9 @@ function App() {
       if (state.openSettings !== undefined) {
         setIsSettingsOpen(!!state.openSettings);
       }
+      if (state.voiceToolCalls !== undefined) {
+        applyVoiceToolCalls(state.voiceToolCalls);
+      }
       // Audio prompt loaded from native file picker
       if (state.isAudioPrompt && state.prompt) {
         setPrompts(prev => {
@@ -347,7 +426,7 @@ function App() {
     return () => {
       delete (window as any).updateState;
     };
-  }, [sendPrompts]);
+  }, [sendPrompts, applyVoiceToolCalls]);
 
   // ─── UI callbacks ─────────────────────────────────────────────────
 
@@ -389,6 +468,23 @@ function App() {
     setPrompts(prev => [...prev, { id, x, y, label, colorIndex }]);
   }, []);
 
+  const addPromptLabel = useCallback((label: string) => {
+    if (promptsRef.current.length >= MAX_ENGINE_PROMPTS) return;
+    const el = promptSurfaceRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const pad = 70;
+    const safeWidth = Math.max(1, width - pad * 2);
+    const safeHeight = Math.max(1, height - pad * 2);
+    setPrompts(prev => [...prev, {
+      id: nextIdRef.current++,
+      x: pad + Math.random() * safeWidth,
+      y: pad + Math.random() * safeHeight,
+      label,
+      colorIndex: nextColorRef.current++,
+    }]);
+  }, []);
+
   const handleTextChange = useCallback((id: number, text: string) => {
     setPrompts(prev => prev.map(p => p.id === id ? { ...p, label: text } : p));
   }, []);
@@ -409,7 +505,7 @@ function App() {
   // ─── Render ────────────────────────────────────────────────────────
 
   return (
-    <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', background: 'var(--color-bg)' }}>
+    <div className="collider-app-shell">
       {/* Transport — top left */}
       <div style={{
         position: 'fixed',
@@ -417,6 +513,8 @@ function App() {
         left: 'var(--app-padding)',
         zIndex: 10,
         color: 'var(--color-fg)',
+        display: 'flex',
+        alignItems: 'center',
       }}>
         <TransportControls
           isPlaying={isPlaying}
@@ -426,34 +524,38 @@ function App() {
           onReset={resetModel}
           volumeSliderPosition="bottom"
           model={modelName}
+          showReset={false}
           showSpeaker
           speakerStreaming={speakerStreaming}
           onToggleSpeaker={toggleSpeakerStream}
+          voiceStatus={voiceStatus}
         />
+        <Tooltip title={canAddPrompt || prompts.some(p => p.isAudio) ? "Upload audio prompt" : "Maximum prompt slots reached"}>
+          <IconButton
+            onClick={() => post({ type: 'loadAudioPrompt' })}
+            disabled={!canAddPrompt && !prompts.some(p => p.isAudio)}
+            sx={{
+              width: 40,
+              height: 40,
+              ml: '8px',
+            }}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>upload</span>
+          </IconButton>
+        </Tooltip>
       </div>
 
-      {/* Model selector + Settings — top right */}
+      {/* Settings — top right */}
       <div style={{
         position: 'fixed',
         top: 'var(--app-padding)',
-        right: 'var(--app-padding)',
+        right: 'calc(var(--app-padding) + var(--instrument-rail-width) + 16px)',
         zIndex: 10,
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         color: 'var(--color-fg)',
       }}>
-        <ModelSelector
-          modelName={modelName}
-          localModels={localModels}
-          remoteModels={remoteModels}
-          downloadProgress={downloadProgress}
-
-          onSelectModel={(name: string) => post({ type: 'selectModel', name })}
-          onDownloadModel={(name: string) => post({ type: 'downloadModel', name })}
-          onDeleteModel={(name: string) => post({ type: 'deleteModel', name })}
-          onSelectFolder={() => post({ type: 'selectDownloadFolder' })}
-        />
         <IconButton
           onClick={() => setIsSettingsOpen(true)}
           variant="ghost"
@@ -463,7 +565,7 @@ function App() {
           }}
           title="Settings (Cmd+,)"
         >
-          <TuneIcon sx={{ fontSize: 20 }} />
+          <Settings sx={{ fontSize: 20 }} />
         </IconButton>
       </div>
 
@@ -484,7 +586,7 @@ function App() {
       <div style={{ height: 'calc(var(--app-padding) + 56px + var(--app-padding))', flexShrink: 0 }} />
 
       {/* PromptSurface */}
-      <div ref={promptSurfaceRef} style={{ flex: 1, position: 'relative' }}>
+      <div ref={promptSurfaceRef} className="prompt-surface-wrap">
         <PromptSurface
           prompts={prompts}
           listener={listener}
@@ -501,69 +603,66 @@ function App() {
           audioLevel={audioLevel}
           debug={debug}
           collisions={collisionsEnabled}
+          listenerImage={elatoLogoUrl}
         />
       </div>
 
-      {/* TimingIndicator — fixed bottom-left */}
-      <div style={{
-        position: 'fixed',
-        bottom: 'calc(var(--app-padding) + 3px)',
-        left: 'var(--app-padding)',
-        zIndex: 10,
-        color: 'var(--color-muted)',
-      }}>
-        <TimingIndicator frameMs={metrics.frameMs} droppedFrames={metrics.droppedFrames} buffersize={paramsState.buffersize} onBufferChange={(v) => sendParamChange(8, v)} isPlaying={isPlaying} bufferLabel="buffer" />
-      </div>
+      <aside className="instrument-rail" aria-label="Instruments">
+        <div className="instrument-list">
+          {INSTRUMENTS.map((instrument) => (
+            <Tooltip
+              key={instrument.name}
+              title={canAddPrompt ? `Add ${instrument.name}` : "Maximum prompt slots reached"}
+              placement="left"
+            >
+              <span>
+                <button
+                  className="instrument-tile"
+                  type="button"
+                  onClick={() => addPromptLabel(instrument.prompt)}
+                  disabled={!canAddPrompt}
+                  aria-label={`Add ${instrument.name}`}
+                >
+                  <img
+                    className="instrument-emoji"
+                    src={twemojiUrl(instrument.icon)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                  />
+                  <span className="instrument-name">{instrument.name}</span>
+                </button>
+              </span>
+            </Tooltip>
+          ))}
+        </div>
+      </aside>
+
+      <div className="elato-wordmark">ELATO</div>
+
+      {(voiceTranscript || voiceStatus === 'listening' || voiceStatus === 'processing' || voiceStatus === 'thinking') && (
+        <div className="voice-chat-dock" aria-live="polite">
+          {voiceTranscript ? (
+            <div className="voice-message-row">
+              <div className="voice-message-bubble">{voiceTranscript}</div>
+            </div>
+          ) : (
+            <div className="voice-status-pill">
+              {voiceStatus === 'listening' ? 'Listening...' : 'Processing...'}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Bottom bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: 'var(--app-padding)', flexShrink: 0, gap: '12px', position: 'relative', justifyContent: 'flex-end' }}>
-
-        {/* Upload Audio Prompt */}
-        <Tooltip title={canAddPrompt || prompts.some(p => p.isAudio) ? "Upload audio prompt" : "Maximum prompt slots reached"}>
-          <IconButton
-            onClick={() => post({ type: 'loadAudioPrompt' })}
-            disabled={!canAddPrompt && !prompts.some(p => p.isAudio)}
-            sx={{
-              width: 40,
-              height: 40,
-            }}
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>upload</span>
-          </IconButton>
-        </Tooltip>
-
-        {/* Add Prompt */}
-        <Tooltip title={canAddPrompt ? "Add prompt" : "Maximum prompt slots reached"}>
-          <span>
-          <IconButton
-            onClick={() => {
-              if (!canAddPrompt) return;
-              const el = promptSurfaceRef.current;
-              if (!el) return;
-              const { width, height } = el.getBoundingClientRect();
-              const pad = 60;
-              const x = pad + Math.random() * (width - pad * 2);
-              const y = pad + Math.random() * (height - pad * 2);
-              handlePromptAdd(x, y);
-            }}
-            disabled={!canAddPrompt}
-            sx={{
-              width: 40,
-              height: 40,
-            }}
-          >
-            <span className="material-icons" style={{ fontSize: '20px' }}>add</span>
-          </IconButton>
-          </span>
-        </Tooltip>
-
+      <div style={{ display: 'flex', alignItems: 'center', padding: 'var(--app-padding)', paddingRight: 'calc(var(--app-padding) + var(--instrument-rail-width) + 16px)', flexShrink: 0, gap: '12px', position: 'relative', justifyContent: 'flex-end' }}>
         {/* Speed slider — absolute, aligned to the right of the bar (left of Add Prompt) */}
         <div
           className={`speed-slider-dock${hasThrown ? ' visible' : ''}`}
           style={{
             position: 'absolute',
             bottom: 'calc(var(--app-padding) + 1px)',
-            right: '140px',
+            right: 'calc(var(--instrument-rail-width) + 116px)',
             transform: hasThrown ? 'translateY(0)' : 'translateY(200%)',
             maxWidth: '260px',
             width: '100%',
@@ -636,6 +735,45 @@ function App() {
         showDrumless={true}
         columns={1}
         drumless={paramsState.drumless}
+        extraContent={(
+          <div className="settings-extra">
+            <div className="settings-extra-section">
+              <ModelSelector
+                modelName={modelName}
+                localModels={localModels}
+                remoteModels={remoteModels}
+                downloadProgress={downloadProgress}
+                onSelectModel={(name: string) => post({ type: 'selectModel', name })}
+                onDownloadModel={(name: string) => post({ type: 'downloadModel', name })}
+                onDeleteModel={(name: string) => post({ type: 'deleteModel', name })}
+                onSelectFolder={() => post({ type: 'selectDownloadFolder' })}
+              />
+            </div>
+            <div className="settings-extra-section settings-extra-row">
+              <Tooltip title="Reset model state">
+                <IconButton
+                  onClick={resetModel}
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    flexShrink: 0,
+                  }}
+                >
+                  <Replay sx={{ fontSize: 20 }} />
+                </IconButton>
+              </Tooltip>
+              <TimingIndicator
+                frameMs={metrics.frameMs}
+                droppedFrames={metrics.droppedFrames}
+                buffersize={paramsState.buffersize}
+                onBufferChange={(v) => sendParamChange(8, v)}
+                isPlaying={isPlaying}
+                bufferLabel="buffer"
+                stacked
+              />
+            </div>
+          </div>
+        )}
       />
 
       {resourcesMissing && (

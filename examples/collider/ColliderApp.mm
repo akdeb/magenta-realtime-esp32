@@ -84,17 +84,161 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
     }
 }
 
+@protocol ColliderAudioWebSocketStreamerDelegate <NSObject>
+- (void)colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:(NSData*)data;
+@end
+
 @interface ColliderAudioWebSocketStreamer : NSObject <NSNetServiceDelegate>
 @property (nonatomic, readonly) BOOL isRunning;
 @property (nonatomic, readonly) BOOL streamingEnabled;
 @property (nonatomic, readonly) int esp32Volume;  // 0–100, current ESP32 speaker volume
+@property (nonatomic, weak) id<ColliderAudioWebSocketStreamerDelegate> delegate;
 - (instancetype)initWithPort:(uint16_t)port path:(NSString*)path;
 - (BOOL)start;
 - (void)stop;
 - (void)setStreamingEnabled:(BOOL)enabled;
+- (void)suspendStreamingForVoiceCommand;
 - (void)pushLeft:(const float*)left right:(const float*)right count:(AVAudioFrameCount)count;
+- (void)sendServerMessage:(NSString*)message;
 // Stores the volume, persists it, and pushes a VOLUME.UPDATE message to the device.
 - (void)setEsp32Volume:(int)volumePercent;
+@end
+
+@protocol ColliderVoiceAgentDelegate <NSObject>
+- (void)voiceAgentDidStartSpeech;
+- (void)voiceAgentDidCommitAudio;
+- (void)voiceAgentDidTranscribe:(NSString*)transcript;
+- (void)voiceAgentDidFinishWithTranscript:(NSString*)transcript toolCalls:(NSArray*)toolCalls;
+- (void)voiceAgentDidFail:(NSString*)message;
+@end
+
+@interface ColliderVoiceAgent : NSObject
+@property (nonatomic, weak) id<ColliderVoiceAgentDelegate> delegate;
+- (void)start;
+- (void)stop;
+- (void)pushPCM16Audio:(NSData*)data;
+@end
+
+@implementation ColliderVoiceAgent {
+    NSTask* _task;
+    NSFileHandle* _stdinHandle;
+    NSMutableData* _stdoutBuffer;
+}
+
+- (void)start {
+    if (_task && _task.isRunning) return;
+    NSString* script = [[NSBundle mainBundle] pathForResource:@"voice_agent" ofType:@"py"];
+    if (!script) script = @"/Users/akashdeepdeb/Desktop/Projects/magenta-realtime/examples/collider/voice_agent.py";
+    NSPipe* inPipe = [NSPipe pipe];
+    NSPipe* outPipe = [NSPipe pipe];
+    _stdoutBuffer = [NSMutableData data];
+    _task = [[NSTask alloc] init];
+    NSArray<NSString*>* pythonCandidates = @[
+        @"/opt/homebrew/Caskroom/miniconda/base/bin/python3",
+        @"/opt/homebrew/bin/python3",
+        @"/usr/local/bin/python3",
+    ];
+    NSString* pythonPath = nil;
+    for (NSString* candidate in pythonCandidates) {
+        if ([[NSFileManager defaultManager] isExecutableFileAtPath:candidate]) {
+            pythonPath = candidate;
+            break;
+        }
+    }
+    if (pythonPath) {
+        _task.launchPath = pythonPath;
+        _task.arguments = @[script];
+    } else {
+        _task.launchPath = @"/usr/bin/env";
+        _task.arguments = @[@"python3", script];
+    }
+    _task.standardInput = inPipe;
+    _task.standardOutput = outPipe;
+    _task.standardError = outPipe;
+    _stdinHandle = inPipe.fileHandleForWriting;
+    __weak ColliderVoiceAgent* weakSelf = self;
+    outPipe.fileHandleForReading.readabilityHandler = ^(NSFileHandle* handle) {
+        NSData* data = [handle availableData];
+        if (data.length > 0) [weakSelf handleOutputData:data];
+    };
+    @try {
+        [_task launch];
+        NSLog(@"Collider: voice agent launched");
+    } @catch (NSException* e) {
+        NSLog(@"Collider: voice agent launch failed: %@", e);
+    }
+}
+
+- (void)stop {
+    if (_task.isRunning) [_task terminate];
+    _task = nil;
+    _stdinHandle = nil;
+}
+
+- (void)pushPCM16Audio:(NSData*)data {
+    if (!_task || !_task.isRunning) [self start];
+    if (!_stdinHandle || data.length == 0) return;
+    @try {
+        [_stdinHandle writeData:data];
+    } @catch (NSException* e) {
+        NSLog(@"Collider: voice agent stdin write failed: %@", e);
+    }
+}
+
+- (void)handleOutputData:(NSData*)data {
+    @synchronized (self) {
+        [_stdoutBuffer appendData:data];
+        while (true) {
+            const uint8_t* bytes = (const uint8_t*)_stdoutBuffer.bytes;
+            NSUInteger newline = NSNotFound;
+            for (NSUInteger i = 0; i < _stdoutBuffer.length; ++i) {
+                if (bytes[i] == '\n') { newline = i; break; }
+            }
+            if (newline == NSNotFound) break;
+            NSData* lineData = [_stdoutBuffer subdataWithRange:NSMakeRange(0, newline)];
+            [_stdoutBuffer replaceBytesInRange:NSMakeRange(0, newline + 1) withBytes:NULL length:0];
+            if (lineData.length == 0) continue;
+            NSDictionary* event = [NSJSONSerialization JSONObjectWithData:lineData options:0 error:nil];
+            if (![event isKindOfClass:NSDictionary.class]) {
+                NSString* line = [[NSString alloc] initWithData:lineData encoding:NSUTF8StringEncoding];
+                NSLog(@"Collider voice agent: %@", line);
+                continue;
+            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [self handleEvent:event];
+            });
+        }
+    }
+}
+
+- (void)handleEvent:(NSDictionary*)event {
+    NSString* name = event[@"event"];
+    if ([name isEqualToString:@"speech_started"]) {
+        [self.delegate voiceAgentDidStartSpeech];
+    } else if ([name isEqualToString:@"committed"]) {
+        [self.delegate voiceAgentDidCommitAudio];
+    } else if ([name isEqualToString:@"transcribed"]) {
+        NSString* transcript = [event[@"transcript"] isKindOfClass:NSString.class] ? event[@"transcript"] : @"";
+        [self.delegate voiceAgentDidTranscribe:transcript];
+    } else if ([name isEqualToString:@"result"]) {
+        NSString* transcript = [event[@"transcript"] isKindOfClass:NSString.class] ? event[@"transcript"] : @"";
+        NSArray* tools = [event[@"tools"] isKindOfClass:NSArray.class] ? event[@"tools"] : @[];
+        [self.delegate voiceAgentDidFinishWithTranscript:transcript toolCalls:tools];
+    } else if ([name isEqualToString:@"error"]) {
+        NSString* message = [event[@"message"] isKindOfClass:NSString.class] ? event[@"message"] : @"Unknown voice agent error";
+        NSLog(@"Collider voice agent error: %@", message);
+        NSArray* tools = [event[@"tools"] isKindOfClass:NSArray.class] ? event[@"tools"] : @[];
+        NSString* transcript = [event[@"transcript"] isKindOfClass:NSString.class] ? event[@"transcript"] : @"";
+        if (tools.count > 0) {
+            [self.delegate voiceAgentDidFinishWithTranscript:transcript toolCalls:tools];
+        } else {
+            [self.delegate voiceAgentDidFail:message];
+        }
+    } else if ([name isEqualToString:@"ready"] || [name isEqualToString:@"agent_loaded"]) {
+        NSLog(@"Collider voice agent: %@", event);
+    }
+}
+
 @end
 
 @implementation ColliderAudioWebSocketStreamer {
@@ -111,6 +255,7 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
     std::atomic<uint32_t> _writePos;
     std::atomic<uint32_t> _readPos;
     std::atomic<int> _esp32Volume;
+    std::vector<uint8_t> _incoming;
     int16_t _ring[kEsp32AudioRingSize];
     uint16_t _port;
     uint64_t _packetsSent;
@@ -257,9 +402,16 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
         [self sendServerMessage:@"RESPONSE.CREATED"];
         NSLog(@"Collider: ESP32 speaker stream enabled");
     } else {
-        [self sendServerMessage:@"RESPONSE.COMPLETE"];
+        [self sendServerMessage:@"AUDIO.COMMITTED"];
         NSLog(@"Collider: ESP32 speaker stream disabled");
     }
+}
+
+- (void)suspendStreamingForVoiceCommand {
+    _streamingEnabled.store(false, std::memory_order_release);
+    _writePos.store(0, std::memory_order_relaxed);
+    _readPos.store(0, std::memory_order_relaxed);
+    if (_encoder) opus_encoder_ctl(_encoder, OPUS_RESET_STATE);
 }
 
 - (void)pushLeft:(const float*)left right:(const float*)right count:(AVAudioFrameCount)count {
@@ -346,8 +498,57 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
 - (void)drainIncoming {
     int fd = _clientFd.load(std::memory_order_acquire);
     if (fd < 0) return;
-    uint8_t discard[1024];
-    while (recv(fd, discard, sizeof(discard), 0) > 0) {}
+    uint8_t buffer[4096];
+    while (true) {
+        ssize_t n = recv(fd, buffer, sizeof(buffer), 0);
+        if (n <= 0) break;
+        _incoming.insert(_incoming.end(), buffer, buffer + n);
+    }
+
+    while (_incoming.size() >= 2) {
+        uint8_t b0 = _incoming[0];
+        uint8_t b1 = _incoming[1];
+        uint8_t opcode = b0 & 0x0f;
+        bool masked = (b1 & 0x80) != 0;
+        uint64_t len = b1 & 0x7f;
+        size_t offset = 2;
+        if (len == 126) {
+            if (_incoming.size() < offset + 2) return;
+            len = ((uint64_t)_incoming[offset] << 8) | _incoming[offset + 1];
+            offset += 2;
+        } else if (len == 127) {
+            if (_incoming.size() < offset + 8) return;
+            len = 0;
+            for (int i = 0; i < 8; ++i) len = (len << 8) | _incoming[offset + i];
+            offset += 8;
+        }
+        if (!masked) {
+            _incoming.erase(_incoming.begin(), _incoming.begin() + std::min<size_t>(_incoming.size(), offset + (size_t)len));
+            continue;
+        }
+        if (_incoming.size() < offset + 4 + len) return;
+        uint8_t mask[4] = { _incoming[offset], _incoming[offset + 1], _incoming[offset + 2], _incoming[offset + 3] };
+        offset += 4;
+        NSMutableData* payload = [NSMutableData dataWithLength:(NSUInteger)len];
+        uint8_t* out = (uint8_t*)payload.mutableBytes;
+        for (uint64_t i = 0; i < len; ++i) out[i] = _incoming[offset + (size_t)i] ^ mask[i & 3];
+        _incoming.erase(_incoming.begin(), _incoming.begin() + offset + (size_t)len);
+
+        if (opcode == 0x2 && payload.length > 0) {
+            id delegate = self.delegate;
+            if ([delegate respondsToSelector:@selector(colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:)]) {
+                NSData* copy = [payload copy];
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [delegate colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:copy];
+                });
+            }
+        } else if (opcode == 0x8) {
+            int old = _clientFd.exchange(-1, std::memory_order_acq_rel);
+            if (old >= 0) close(old);
+            _incoming.clear();
+            return;
+        }
+    }
 }
 
 - (void)encodeAndSendIfReady {
@@ -983,7 +1184,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
 // ─── AppDelegate ─────────────────────────────────────────────────────────────
 
-@interface AppDelegate : NSObject <NSApplicationDelegate>
+@interface AppDelegate : NSObject <NSApplicationDelegate, ColliderAudioWebSocketStreamerDelegate, ColliderVoiceAgentDelegate>
 @end
 
 @implementation AppDelegate {
@@ -992,6 +1193,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     AVAudioEngine* _audioEngine;
     AVAudioSourceNode* _sourceNode;
     ColliderAudioWebSocketStreamer* _audioWebSocketStreamer;
+    ColliderVoiceAgent* _voiceAgent;
     MIDIClientRef _midiClient;
     MIDIPortRef _midiInputPort;
     MIDIEndpointRef _midiVirtualDest;
@@ -999,6 +1201,8 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     ColliderAppController* _controller;
     ColliderSettingsController* _settingsController;
     BOOL _isPlaying;
+    BOOL _voiceCommandActive;
+    BOOL _resumeSpeakerAfterVoice;
     std::atomic<bool> _localOutputEnabled;
     NSMenuItem* _playStopMenuItem;
 }
@@ -1027,7 +1231,11 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
     _audioWebSocketStreamer = [[ColliderAudioWebSocketStreamer alloc] initWithPort:kEsp32WebSocketPort
                                                                                path:@"/ws/esp32"];
+    _audioWebSocketStreamer.delegate = self;
     [_audioWebSocketStreamer start];
+    _voiceAgent = [[ColliderVoiceAgent alloc] init];
+    _voiceAgent.delegate = self;
+    [_voiceAgent start];
 
     // 500×500 window, resizable for testing
     NSRect frame = NSMakeRect(0, 0, 700, 505);
@@ -1038,7 +1246,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
                                                     NSWindowStyleMaskResizable
                                             backing:NSBackingStoreBuffered
                                               defer:NO];
-    _window.title = @"Musical Toys";
+    _window.title = @"Musical AI Toys with ELATO";
     _window.restorable = NO;
     _window.contentMinSize = NSMakeSize(310, 310);
     _window.contentViewController = _controller;
@@ -1057,6 +1265,68 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     _settingsController.audioStreamer = _audioWebSocketStreamer;
 
     [self autoLoadModel];
+}
+
+- (void)enterVoiceCommandModeIfNeeded {
+    if (_voiceCommandActive) return;
+    _voiceCommandActive = YES;
+    _resumeSpeakerAfterVoice = _audioWebSocketStreamer.streamingEnabled;
+    [_audioWebSocketStreamer suspendStreamingForVoiceCommand];
+    _isPlaying = NO;
+    _playStopMenuItem.title = @"Play";
+    [self updateEngineBypassForOutputStateTriggeringReset:NO];
+    [_controller sendStateUpdate:@{
+        @"isPlaying": @NO,
+        @"speakerStreaming": @NO,
+        @"voiceStatus": @"listening",
+        @"voiceTranscript": @""
+    }];
+    NSLog(@"Collider: entered ESP32 voice command mode");
+}
+
+- (void)colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:(NSData*)data {
+    [self enterVoiceCommandModeIfNeeded];
+    [_voiceAgent pushPCM16Audio:data];
+}
+
+- (void)voiceAgentDidStartSpeech {
+    [self enterVoiceCommandModeIfNeeded];
+}
+
+- (void)voiceAgentDidCommitAudio {
+    [_audioWebSocketStreamer sendServerMessage:@"AUDIO.COMMITTED"];
+    [_controller sendStateUpdate:@{@"voiceStatus": @"processing"}];
+}
+
+- (void)voiceAgentDidTranscribe:(NSString*)transcript {
+    [_controller sendStateUpdate:@{@"voiceStatus": @"thinking", @"voiceTranscript": transcript ?: @""}];
+}
+
+- (void)voiceAgentDidFinishWithTranscript:(NSString*)transcript toolCalls:(NSArray*)toolCalls {
+    NSLog(@"Collider voice command transcript: %@ tools=%@", transcript, toolCalls);
+    [_controller sendStateUpdate:@{
+        @"voiceStatus": @"done",
+        @"voiceToolCalls": toolCalls ?: @[],
+        @"voiceTranscript": transcript ?: @""
+    }];
+    _voiceCommandActive = NO;
+    if (_resumeSpeakerAfterVoice) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.35 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self->_audioWebSocketStreamer setStreamingEnabled:YES];
+            [self updateEngineBypassForOutputStateTriggeringReset:YES];
+            [self->_controller sendStateUpdate:@{@"speakerStreaming": @YES, @"voiceStatus": @"idle"}];
+        });
+    } else {
+        [_audioWebSocketStreamer sendServerMessage:@"AUDIO.COMMITTED"];
+        [self updateEngineBypassForOutputStateTriggeringReset:NO];
+        [_controller sendStateUpdate:@{@"voiceStatus": @"idle"}];
+    }
+}
+
+- (void)voiceAgentDidFail:(NSString*)message {
+    NSLog(@"Collider voice agent failed: %@", message);
+    [_controller sendStateUpdate:@{@"voiceStatus": @"error"}];
+    [self voiceAgentDidFinishWithTranscript:@"" toolCalls:@[]];
 }
 
 // ─── AVAudioEngine ───────────────────────────────────────────────────────────
@@ -1190,11 +1460,11 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
     NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
     NSMenu* appMenu = [[NSMenu alloc] init];
-    [appMenu addItemWithTitle:@"About MRT2 - Collider" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+    [appMenu addItemWithTitle:@"About Musical AI Toys with ELATO" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Settings..." action:@selector(menuShowSettings:) keyEquivalent:@","];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit MRT2 - Collider" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:@"Quit Musical AI Toys with ELATO" action:@selector(terminate:) keyEquivalent:@"q"];
     appMenuItem.submenu = appMenu;
     [menuBar addItem:appMenuItem];
 
@@ -1278,6 +1548,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     if (![[NSFileManager defaultManager] fileExistsAtPath:modelPath]) return;
 
     NSLog(@"Collider: Auto-loading model from %@", modelPath);
+    [_controller setModelLoading:YES];
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         BOOL success = self->_engine.load_model(modelPath.UTF8String);
         if (success) {
@@ -1297,6 +1568,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
         } else {
             NSLog(@"Collider: Failed to auto-load model from %@", modelPath);
             dispatch_async(dispatch_get_main_queue(), ^{
+                [self->_controller setModelLoading:NO];
                 [self->_controller sendStateUpdate:@{@"modelName": @"No model loaded"}];
             });
         }
@@ -1307,6 +1579,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
 - (void)applicationWillTerminate:(NSNotification*)notification {
     [_audioWebSocketStreamer stop];
+    [_voiceAgent stop];
     _engine.stop();
     _engine.unload();
     [_audioEngine stop];

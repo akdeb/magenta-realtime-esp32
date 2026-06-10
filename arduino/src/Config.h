@@ -49,8 +49,7 @@ bool discoverElatoServer(String &outIp, uint16_t &outPort, int timeoutMs = 10000
 extern const uint32_t SAMPLE_RATE;
 extern const uint32_t INPUT_SAMPLE_RATE;
 
-// ---------- Development ------------
-// #define TOUCH_MODE
+#define TOUCH_MODE
 
 // ----------------- Pin Definitions -----------------
 #define USE_NORMAL_ESP32

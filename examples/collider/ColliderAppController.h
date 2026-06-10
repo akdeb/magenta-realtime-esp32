@@ -44,6 +44,7 @@ struct ColliderSharedState {
 @property (nonatomic, assign) RealtimeRunner* engine;
 @property (nonatomic, assign) ColliderSharedState* sharedState;
 - (void)notifyModelLoaded:(NSString*)modelName;
+- (void)setModelLoading:(BOOL)loading;
 - (void)sendStateUpdate:(NSDictionary*)state;
 - (void)restoreSavedParams;
 - (void)handleLoadModel;

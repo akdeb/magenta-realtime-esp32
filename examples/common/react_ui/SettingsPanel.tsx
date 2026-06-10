@@ -16,6 +16,7 @@
 
 import { Settings } from './Settings';
 import IconButton from '@mui/material/IconButton';
+import type { ReactNode } from 'react';
 
 declare const __COMMIT_HASH__: string;
 
@@ -39,12 +40,14 @@ interface SettingsPanelProps {
   columns?: number;
   drumless?: boolean;
   showDrumless?: boolean;
+  extraContent?: ReactNode;
 }
 
 export function SettingsPanel({
   open,
   onClose,
   columns = 2,
+  extraContent,
   ...settingsProps
 }: SettingsPanelProps) {
   return (
@@ -83,6 +86,7 @@ export function SettingsPanel({
           </IconButton>
         </div>
         <div style={{ padding: '0 var(--app-padding) var(--app-padding)', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {extraContent}
           <Settings {...settingsProps} columns={columns} />
           {/* Footer showing build git commit hash */}
           <div style={{

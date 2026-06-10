@@ -18,7 +18,9 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import { VolumeControl } from './VolumeControl';
 import { Replay } from '@mui/icons-material';
-import { Speaker, VolumeX } from 'lucide-react';
+import { Brain, LoaderCircle, Speaker, VolumeX } from 'lucide-react';
+
+type VoiceStatus = 'idle' | 'listening' | 'processing' | 'thinking' | 'done' | 'error';
 
 interface TransportControlsProps {
   isPlaying: boolean;
@@ -32,11 +34,13 @@ interface TransportControlsProps {
   model?: string;
   resetTooltip?: string;
   showPlay?: boolean;
+  showReset?: boolean;
   showVolume?: boolean;
   isDawPlaying?: boolean;
   showSpeaker?: boolean;
   speakerStreaming?: boolean;
   onToggleSpeaker?: () => void;
+  voiceStatus?: VoiceStatus;
 }
 
 export function TransportControls({
@@ -51,13 +55,19 @@ export function TransportControls({
   model,
   resetTooltip = 'Reset model state',
   showPlay = true,
+  showReset = true,
   showVolume = true,
   isDawPlaying = false,
   showSpeaker = false,
   speakerStreaming = false,
   onToggleSpeaker,
+  voiceStatus = 'idle',
 }: TransportControlsProps) {
   const noModel = !model || model === 'No model loaded';
+  const isVoiceBusy = voiceStatus === 'processing' || voiceStatus === 'thinking';
+  const speakerTooltip = isVoiceBusy
+    ? 'Thinking about your ESP32 voice command'
+    : speakerStreaming ? 'Stop ESP32 speaker stream' : 'Start ESP32 speaker stream';
   const playButton = (
     <button
       onClick={noModel ? undefined : onTogglePlay}
@@ -90,21 +100,22 @@ export function TransportControls({
       alignItems: 'center',
       gap: '8px',
     }}>
-      {/* Reset */}
-      <Tooltip title={resetTooltip}>
-        <IconButton
-          onClick={onReset}
-          onMouseDown={onResetDown}
-          onMouseUp={onResetUp}
-          onMouseLeave={onResetUp}
-          sx={{
-            width: 40,
-            height: 40,
-          }}
-        >
-          <Replay sx={{ fontSize: 20 }} />
-        </IconButton>
-      </Tooltip>
+      {showReset && (
+        <Tooltip title={resetTooltip}>
+          <IconButton
+            onClick={onReset}
+            onMouseDown={onResetDown}
+            onMouseUp={onResetUp}
+            onMouseLeave={onResetUp}
+            sx={{
+              width: 40,
+              height: 40,
+            }}
+          >
+            <Replay sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Tooltip>
+      )}
 
       {/* Play/Pause — large circle */}
       {showPlay && (noModel ? (
@@ -120,19 +131,23 @@ export function TransportControls({
       ))}
 
       {showSpeaker && (
-        <Tooltip title={speakerStreaming ? 'Stop ESP32 speaker stream' : 'Start ESP32 speaker stream'} placement="top">
+        <Tooltip title={speakerTooltip} placement="top">
           <span>
             <IconButton
               onClick={onToggleSpeaker}
-              disabled={!onToggleSpeaker}
+              disabled={!onToggleSpeaker || isVoiceBusy}
               sx={{
                 width: 40,
                 height: 40,
-                color: speakerStreaming ? 'var(--color-accent, #FF7A00)' : 'var(--color-fg)',
-                background: speakerStreaming ? 'var(--color-control-bg-active, rgba(255,122,0,0.14))' : 'transparent',
+                color: isVoiceBusy || speakerStreaming ? 'var(--color-accent, #FF7A00)' : 'var(--color-fg)',
+                background: isVoiceBusy || speakerStreaming ? 'var(--color-control-bg-active, rgba(255,122,0,0.14))' : 'transparent',
               }}
             >
-              {speakerStreaming ? <Speaker size={20} /> : <VolumeX size={20} />}
+              {voiceStatus === 'thinking'
+                ? <Brain size={20} />
+                : voiceStatus === 'processing'
+                  ? <LoaderCircle size={20} className="voice-status-spin" />
+                  : speakerStreaming ? <Speaker size={20} /> : <VolumeX size={20} />}
             </IconButton>
           </span>
         </Tooltip>
