@@ -22,7 +22,7 @@ import Replay from '@mui/icons-material/Replay';
 import Tooltip from '@mui/material/Tooltip';
 import { ModelSelector, SettingsPanel, TimingIndicator, ResourceOnboardingModal, TransportControls, PromptSurface, calculateWeights, ALL_SUGGESTIONS, DEFAULT_TEMPERATURE, DEFAULT_TOPK, DEFAULT_CFG_MUSICCOCA, DEFAULT_CFG_DRUMS, DEFAULT_UNMASK_WIDTH, DEFAULT_BUFFER_SIZE, DEFAULT_VOLUME, COLLIDER_CFG_NOTES, COLLIDER_CFG_MUSICCOCA } from '@magenta-rt/common';
 import type { PromptNode, ListenerNode } from '@magenta-rt/common';
-import elatoLogoUrl from '../transparent-circle-logo.png';
+import elatoLogoUrl from '../assets/transparent-circle-logo.png';
 
 
 // ─── WebKit bridge ───────────────────────────────────────────────────────────
