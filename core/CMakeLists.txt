@@ -16,8 +16,7 @@
 #
 # Provides the MLXEngine (MLX + TFLite + SentencePiece inference pipeline) and
 # RealtimeRunner (audio-thread-safe wrapper with ring buffers and MIDI gate).
-# Link this target from any host (AUv3, standalone, CLI) that wants to run
-# the Magenta RealTime 2 model.
+# Link this target from the collider host to run the Magenta RealTime 2 model.
 
 add_library(magentart_core STATIC
     src/mlx_engine.cpp
@@ -51,9 +50,3 @@ target_link_libraries(magentart_core PUBLIC
 # Install rules (optional — enables `cmake --install` for downstream packaging).
 install(TARGETS magentart_core EXPORT magentartTargets)
 install(DIRECTORY include/magentart DESTINATION include)
-
-# Standalone unit test for NumpyRandomState bit-exactness
-add_executable(numpy_random_state_test
-    src/numpy_random_state_test.cpp
-)
-target_include_directories(numpy_random_state_test PRIVATE src)

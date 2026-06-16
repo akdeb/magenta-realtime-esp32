@@ -17,7 +17,7 @@ This repo is built on [Magenta RealTime 2](https://magenta.withgoogle.com/mrt2),
 
 - `examples/collider/`: native macOS app, React UI, websocket server, ESP32 audio streaming, voice-command agent.
 - `arduino/`: ESP32-S3 firmware for WiFi discovery, touch interrupt, mic streaming, Opus decode, and speaker output.
-- `core/` and `magenta_rt/`: Magenta RealTime C++ and Python inference code.
+- `core/`: Magenta RealTime C++ inference code used by the macOS app.
 
 ## Why mr. esp32
 
@@ -76,14 +76,7 @@ Install Python tooling and MLX voice dependencies:
 
 ```bash
 python3 -m pip install --upgrade pip
-python3 -m pip install -e ".[mlx]" mlx-whisper mlx-lm huggingface_hub
-```
-
-Install the Magenta model resources:
-
-```bash
-mrt models init
-mrt models download
+python3 -m pip install mlx-whisper mlx-lm huggingface_hub
 ```
 
 By default, models/resources are stored under:
@@ -92,7 +85,13 @@ By default, models/resources are stored under:
 ~/Documents/Magenta/magenta-rt-v2/
 ```
 
-The app auto-loads `mrt2_base` from that folder when available. You can also pick a model from the app settings.
+The app can download Magenta RT 2 shared resources and model folders from Hugging Face on first launch. If you already downloaded `mrt2_base`, place it under:
+
+```text
+~/Documents/Magenta/magenta-rt-v2/models/mrt2_base/
+```
+
+You can also pick or download a model from the app settings.
 
 ### 3. Download Local Voice Models
 

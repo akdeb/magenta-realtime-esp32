@@ -241,21 +241,6 @@ add_custom_target(npm_install_root
     COMMENT "Running NPM workspaces install inside examples..."
 )
 
-# React UI for the main MRT2 plugin.
-add_custom_target(build_mrt2_ui ALL
-    COMMAND npm run build
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples/mrt2/react_ui
-    COMMENT "Building MRT2 UI..."
-)
-add_dependencies(build_mrt2_ui npm_install_root)
-
 # --- Project targets ----------------------------------------------------------
 add_subdirectory(core)
-add_subdirectory(examples/mrt2/auv3)
-add_subdirectory(examples/mrt2/standalone)
-add_subdirectory(examples/jam)
 add_subdirectory(examples/collider)
-add_subdirectory(examples/hello_mrt2)
-add_subdirectory(examples/max)
-add_subdirectory(examples/pd)
-add_subdirectory(examples/sc)

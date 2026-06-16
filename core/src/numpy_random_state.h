@@ -23,10 +23,10 @@ namespace detail {
 
 // Reproduces numpy's legacy `np.random.RandomState(seed).randn(n)` exactly, so
 // the C++ MusicCoCa mapper path generates the same Gaussian noise — and hence
-// the same refined embedding and RVQ tokens — as the Python reference in
-// magenta_rt/musiccoca.py. It implements MT19937 with numpy's scalar integer
-// seeding (`mt19937_seed`) plus the polar Box-Muller variant (`legacy_gauss`)
-// that RandomState uses for `randn`.
+// the same refined embedding and RVQ tokens as the original Python reference.
+// It implements MT19937 with numpy's scalar integer seeding (`mt19937_seed`)
+// plus the polar Box-Muller variant (`legacy_gauss`) that RandomState uses for
+// `randn`.
 class NumpyRandomState {
 public:
   explicit NumpyRandomState(uint32_t seed) {

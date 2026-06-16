@@ -552,8 +552,8 @@ bool MLXEngine::Impl::load_model(const char *mlxfn_path) {
     // Locate the decoder-internal previous_frame slot once. Multiple
     // state arrays may match the previous_frame shape (the wrapper's
     // outer sampler_previous_output and the MultivariateDecoder's
-    // inner previous_frame); per `magenta_rt/jax/depthformer.py:591`
-    // the wrapper's slot is unused, so we want the *last* match.
+    // inner previous_frame); the wrapper's slot is unused in exported MRT2
+    // traces, so we want the *last* match.
     previous_frame_state_idx_ = -1;
     for (size_t i = 0; i < transformer_initial_state_.size(); ++i) {
       const auto &shape = transformer_initial_state_[i].shape();
@@ -668,8 +668,7 @@ bool MLXEngine::Impl::load_prefill_model(const char *spectrostream_mlxfn_path,
 //      last fed token so generate_frame continues from the same context.
 //
 // Why trim?
-//   The SpectroStream STFT front-end uses reverse-causal padding
-//   (`magenta_rt/jax/spectrostream.py:1197`), so head tokens see a
+//   The SpectroStream STFT front-end uses reverse-causal padding, so head tokens see a
 //   not-yet-warmed-up encoder body and tail tokens include zero-padded
 //   STFT lookahead. Both yield tokens that don't reflect real audio.
 //
@@ -787,8 +786,7 @@ bool MLXEngine::Impl::prefill_state(
                   {1, static_cast<int>(tokens.shape(1)), static_cast<int>(kNumRVQLevels)});
 
     // Trim away the unreliable head and tail of the encoded sequence.
-    // SpectroStream's STFT front-end uses reverse-causal padding (see
-    // magenta_rt/jax/spectrostream.py: time_padding='reverse_causal'), so
+    // SpectroStream's STFT front-end uses reverse-causal padding, so
     // tokens near the very start (encoder not yet warmed up) and the
     // very end (window padded with zeros) don't reflect real audio.
     // Additionally, drop tokens past `usable_audio_frames` since they

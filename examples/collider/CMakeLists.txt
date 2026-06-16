@@ -100,10 +100,6 @@ add_custom_target(deploy_mrt2_collider
     COMMAND ${CMAKE_COMMAND} -E remove_directory
         "$ENV{HOME}/Applications/Musical AI Toys with ELATO.app"
     COMMAND ${CMAKE_COMMAND} -E remove_directory
-        "$ENV{HOME}/Applications/JamBox by ELATO.app"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory
-        "$ENV{HOME}/Applications/Houseband by ELATO.app"
-    COMMAND ${CMAKE_COMMAND} -E remove_directory
         "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
     COMMAND ditto
         "$<TARGET_BUNDLE_DIR:mrt2_collider>"
