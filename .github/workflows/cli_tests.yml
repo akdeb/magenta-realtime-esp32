@@ -93,8 +93,8 @@ jobs:
         npm install
         npm run build --workspaces --if-present
 
-    - name: Install cmake
-      run: brew install cmake
+    - name: Install native build dependencies
+      run: brew install cmake pkg-config opus
 
     - name: Configure CMake
       run: cmake . -B build -DCMAKE_POLICY_VERSION_MINIMUM=3.5
