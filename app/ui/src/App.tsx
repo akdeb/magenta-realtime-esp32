@@ -600,7 +600,7 @@ function App() {
 
   return (
     <div className="collider-app-shell">
-      <div className="elato-wordmark">mr. esp32</div>
+      <div className="elato-wordmark">Magenta Realtime ESP32</div>
 
       {/* Transport: bottom left */}
       <div className="transport-dock">

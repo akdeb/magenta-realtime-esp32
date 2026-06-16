@@ -234,13 +234,13 @@ else()
     add_compile_definitions(MAGENTART_DEBUG_LOG=0)
 endif()
 
-# Run a unified npm workspaces install on the examples folder
+# Run a unified npm workspaces install at the repo root.
 add_custom_target(npm_install_root
     COMMAND npm install
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/examples
-    COMMENT "Running NPM workspaces install inside examples..."
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Running NPM workspaces install..."
 )
 
 # --- Project targets ----------------------------------------------------------
 add_subdirectory(core)
-add_subdirectory(examples/collider)
+add_subdirectory(app)

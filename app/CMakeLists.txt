@@ -12,30 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# MRT2 - Collider standalone macOS app.
+# Magenta Realtime ESP32 standalone macOS app.
 # Resources (musiccoca, spectrostream) are loaded from ~/Documents/Magenta/magenta-rt-v2/resources/
-# at runtime — see examples/common/cpp/magenta_paths.h.
+# at runtime; see app/common/cpp/magenta_paths.h.
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(OPUS REQUIRED opus)
 
-set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/../common/assets/AppIcon.icns")
+set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/common/assets/AppIcon.icns")
 set_source_files_properties(${APP_ICON} PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
 add_executable(mrt2_collider MACOSX_BUNDLE
     ColliderApp.mm
     ColliderAppController.mm
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/cpp/magenta_paths.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/objc/MagentaModelManager.mm
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/objc/MagentaModelDownloader.mm
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/objc/MagentaSettings.mm
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/cpp/magenta_paths.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/objc/MagentaModelManager.mm
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/objc/MagentaModelDownloader.mm
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/objc/MagentaSettings.mm
     ${APP_ICON}
 )
 
 target_include_directories(mrt2_collider PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/../common/objc
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/objc
     ${OPUS_INCLUDE_DIRS}
 )
 target_compile_options(mrt2_collider PRIVATE -fobjc-arc)
@@ -57,7 +57,7 @@ set_target_properties(mrt2_collider PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ColliderInfo.plist.in"
     MACOSX_BUNDLE_EXECUTABLE_NAME MRT2_Collider
-    MACOSX_BUNDLE_BUNDLE_NAME "mr. esp32 by ELATO"
+    MACOSX_BUNDLE_BUNDLE_NAME "Magenta Realtime ESP32"
     MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.google.mrt2.collider"
 )
@@ -100,17 +100,17 @@ add_custom_target(deploy_mrt2_collider
     COMMAND ${CMAKE_COMMAND} -E remove_directory
         "$ENV{HOME}/Applications/Musical AI Toys with ELATO.app"
     COMMAND ${CMAKE_COMMAND} -E remove_directory
-        "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
+        "$ENV{HOME}/Applications/Magenta Realtime ESP32.app"
     COMMAND ditto
         "$<TARGET_BUNDLE_DIR:mrt2_collider>"
-        "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
-    COMMENT "Building and deploying mr. esp32 by ELATO standalone app"
+        "$ENV{HOME}/Applications/Magenta Realtime ESP32.app"
+    COMMENT "Building and deploying Magenta Realtime ESP32 standalone app"
     VERBATIM
 )
 
-# Notarize the deployed mr. esp32 by ELATO.app (requires Developer ID).
+# Notarize the deployed Magenta Realtime ESP32.app (requires Developer ID).
 magentart_add_notarize_target(notarize_mrt2_collider
-    APP "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
+    APP "$ENV{HOME}/Applications/Magenta Realtime ESP32.app"
     DEPENDS deploy_mrt2_collider
     ZIP_NAME "MRT2_Collider.zip"
 )

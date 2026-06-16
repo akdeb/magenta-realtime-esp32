@@ -22,9 +22,9 @@
 #import <CoreAudio/CoreAudio.h>
 #import <CommonCrypto/CommonDigest.h>
 #import "ColliderAppController.h"
-#import "../common/objc/MagentaSettings.h"
+#import "common/objc/MagentaSettings.h"
 #include <magentart/realtime_runner.h>
-#include "../common/cpp/magenta_paths.h"
+#include "common/cpp/magenta_paths.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -60,6 +60,7 @@ enum {
 static constexpr float kEsp32OutputBoostDb = 2.0f;
 static constexpr float kEsp32OutputCeiling = 0.89f;
 static constexpr float kEsp32LimiterKnee = 0.82f;  // signal is clean below this
+static constexpr float kEsp32EqualPowerDownmixGain = 0.70710678f;
 
 // Applies a fixed boost for the small mono speaker, then a soft-knee peak
 // limiter that only acts on samples above the knee. Sub-knee samples pass
@@ -82,6 +83,19 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
         y = std::max(-ceil, std::min(ceil, y));
         samples[i] = (int16_t)lrintf(y * 32767.0f);
     }
+}
+
+static float SoftLimitFloatForPCM(float y) {
+    constexpr float knee = 0.92f;
+    constexpr float ceil = 0.98f;
+    constexpr float range = ceil - knee;
+    float a = std::fabs(y);
+    if (a > knee) {
+        float over = (a - knee) / (1.0f - knee);
+        a = knee + range * std::tanh(over);
+        y = std::copysign(a, y);
+    }
+    return std::max(-ceil, std::min(ceil, y));
 }
 
 @protocol ColliderAudioWebSocketStreamerDelegate <NSObject>
@@ -128,7 +142,7 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
 - (void)start {
     if (_task && _task.isRunning) return;
     NSString* script = [[NSBundle mainBundle] pathForResource:@"voice_agent" ofType:@"py"];
-    if (!script) script = @"/Users/akashdeepdeb/Desktop/Projects/magenta-realtime/examples/collider/voice_agent.py";
+    if (!script) script = @"/Users/akashdeepdeb/Desktop/Projects/magenta-realtime/app/voice_agent.py";
     NSPipe* inPipe = [NSPipe pipe];
     NSPipe* outPipe = [NSPipe pipe];
     _stdoutBuffer = [NSMutableData data];
@@ -420,8 +434,7 @@ static void BoostLimitPCM16InPlace(int16_t* samples, int count) {
     uint32_t w = _writePos.load(std::memory_order_relaxed);
     uint32_t r = _readPos.load(std::memory_order_acquire);
     for (AVAudioFrameCount i = 0; i < count; ++i) {
-        float mono = 0.5f * (left[i] + right[i]);
-        mono = std::max(-1.0f, std::min(1.0f, mono));
+        float mono = SoftLimitFloatForPCM((left[i] + right[i]) * kEsp32EqualPowerDownmixGain);
         _pcmSquareSum += (double)mono * (double)mono;
         _pcmSampleCount++;
         _ring[w % kEsp32AudioRingSize] = (int16_t)lrintf(mono * 32767.0f);
@@ -910,7 +923,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     [c addSubview:midiHeader];
     y -= 20;
 
-    _midiVirtualLabel = [NSTextField labelWithString:@"Virtual port: mr. esp32 Input"];
+    _midiVirtualLabel = [NSTextField labelWithString:@"Virtual port: Magenta Realtime ESP32 Input"];
     _midiVirtualLabel.frame = NSMakeRect(pad, y, 400, 16);
     _midiVirtualLabel.font = [NSFont systemFontOfSize:10];
     _midiVirtualLabel.textColor = [NSColor tertiaryLabelColor];
@@ -1246,7 +1259,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
                                                     NSWindowStyleMaskResizable
                                             backing:NSBackingStoreBuffered
                                               defer:NO];
-    _window.title = @"mr. esp32 by ELATO";
+    _window.title = @"Magenta Realtime ESP32";
     _window.restorable = NO;
     _window.contentMinSize = NSMakeSize(310, 310);
     _window.contentViewController = _controller;
@@ -1382,7 +1395,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     ColliderSharedState* shared = &_sharedState;
 
     OSStatus status = MIDIClientCreateWithBlock(
-        CFSTR("mr. esp32"),
+        CFSTR("Magenta Realtime ESP32"),
         &_midiClient,
         ^(const MIDINotification* notification) {
             if (notification->messageID == kMIDIMsgSetupChanged) {
@@ -1395,7 +1408,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     if (status != noErr) { NSLog(@"Collider: MIDIClientCreate failed: %d", (int)status); return; }
 
     status = MIDIInputPortCreateWithProtocol(
-        _midiClient, CFSTR("mr. esp32 In"), kMIDIProtocol_1_0, &_midiInputPort,
+        _midiClient, CFSTR("Magenta Realtime ESP32 In"), kMIDIProtocol_1_0, &_midiInputPort,
         ^(const MIDIEventList* evtList, void* srcConnRefCon) {
             const MIDIEventPacket* pkt = &evtList->packet[0];
             for (UInt32 i = 0; i < evtList->numPackets; ++i) {
@@ -1423,7 +1436,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     if (status != noErr) { NSLog(@"Collider: MIDIInputPortCreate failed: %d", (int)status); return; }
 
     status = MIDIDestinationCreateWithProtocol(
-        _midiClient, CFSTR("mr. esp32 Input"), kMIDIProtocol_1_0, &_midiVirtualDest,
+        _midiClient, CFSTR("Magenta Realtime ESP32 Input"), kMIDIProtocol_1_0, &_midiVirtualDest,
         ^(const MIDIEventList* evtList, void* srcConnRefCon) {
             const MIDIEventPacket* pkt = &evtList->packet[0];
             for (UInt32 i = 0; i < evtList->numPackets; ++i) {
@@ -1460,11 +1473,11 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
     NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
     NSMenu* appMenu = [[NSMenu alloc] init];
-    [appMenu addItemWithTitle:@"About mr. esp32 by ELATO" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+    [appMenu addItemWithTitle:@"About Magenta Realtime ESP32" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Settings..." action:@selector(menuShowSettings:) keyEquivalent:@","];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit mr. esp32 by ELATO" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:@"Quit Magenta Realtime ESP32" action:@selector(terminate:) keyEquivalent:@"q"];
     appMenuItem.submenu = appMenu;
     [menuBar addItem:appMenuItem];
 

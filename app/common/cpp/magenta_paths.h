@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// magenta_paths.h — Shared path resolution for Magenta RT examples.
+// magenta_paths.h — Shared path resolution for the Magenta Realtime ESP32 app.
 //
 // Provides centralized access to the ~/Documents/Magenta directory tree so that all
-// examples (standalone, jam, auv3, hello_mrt2, pd, etc.) resolve
+// app components resolve
 // resources and models from the same location.
 //
 // The root directory defaults to ~/Documents/Magenta but can be overridden via the

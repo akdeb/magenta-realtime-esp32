@@ -1,32 +1,32 @@
 # magenta-realtime-esp32
 
-### Mr. ESP32: a tiny device for Magenta RealTime 2.
+### Magenta Realtime ESP32: a tiny device for Magenta RealTime 2.
 
 A local-first macOS app and ESP32-S3 device that streams realtime generative music from your Mac to anywhere in your house. Touch the ESP32, say “add drums” or “make it lo-fi,” and your Mac updates the music locally using Whisper, Qwen, MLX, and Magenta RealTime 2.
 
-[![App](https://img.shields.io/badge/App-C%2B%2B%20&React-yellow)](examples/collider)
+[![App](https://img.shields.io/badge/App-C%2B%2B%20&React-yellow)](app)
 [![Hardware](https://img.shields.io/badge/Hardware-ESP32--S3-red?logo=espressif)](arduino)
 [![Model](https://img.shields.io/badge/Model-Magenta%20RT%202-blue)](https://magenta.withgoogle.com/mrt2)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
 
-<img src="assets/app-view.png" alt="mr. esp32 by ELATO app" width="100%" />
+<img src="assets/app-view.png" alt="Magenta Realtime ESP32 app" width="100%" />
 
 ## Intro
 
-This repo is built on [Magenta RealTime 2](https://magenta.withgoogle.com/mrt2), an open-weights realtime music generation model. The main app in this fork is the Collider-based macOS app:
+This repo is built on [Magenta RealTime 2](https://magenta.withgoogle.com/mrt2), an open-weights realtime music generation model. The main app in this fork is a macOS app for ESP32-backed realtime music:
 
-- `examples/collider/`: native macOS app, React UI, websocket server, ESP32 audio streaming, voice-command agent.
+- `app/`: native macOS app, React UI, websocket server, ESP32 audio streaming, voice-command agent.
 - `arduino/`: ESP32-S3 firmware for WiFi discovery, touch interrupt, mic streaming, Opus decode, and speaker output.
 - `core/`: Magenta RealTime C++ inference code used by the macOS app.
 
-## Why mr. esp32
+## Why Magenta Realtime ESP32
 
 - **Unlimited realtime music generation**: Drag prompt bubbles around a listener puck to steer the music.
 - **ESP32 speaker mode**: Stream generated audio over websocket as Opus packets to ESP32 devices you own.
 - **Voice interrupt**: Touch the ESP32, speak a command, and the Mac pauses music while it listens.
 - **Local STT and LLM**: Whisper transcribes locally; Qwen3.5 chooses tool calls locally.
 - **Tool-call UI actions**: The agent can call `addBubble(text, nearness)` and `removeBubble(text)`.
-- **No cloud required** once your models are downloaded, mr. esp32 works locally.
+- **No cloud required** once your models are downloaded, Magenta Realtime ESP32 works locally.
 
 ## Hardware Requirements
 
@@ -116,13 +116,13 @@ PY
 ```bash
 cmake . -B build
 cmake --build build --target deploy_mrt2_collider -j10
-open ~/Applications/"mr. esp32 by ELATO.app"
+open ~/Applications/"Magenta Realtime ESP32.app"
 ```
 
 The deploy target builds the React UI, signs the app locally, bundles `voice_agent.py`, and copies the app to:
 
 ```text
-~/Applications/mr. esp32 by ELATO.app
+~/Applications/Magenta Realtime ESP32.app
 ```
 
 ## ESP32 Setup
@@ -154,7 +154,7 @@ The Mac app advertises itself over mDNS and runs the websocket server for the ES
 
 ## How To Use It
 
-1. Open `mr. esp32 by ELATO.app`.
+1. Open `Magenta Realtime ESP32.app`.
 2. Wait for the model to load.
 3. Click the large play button to stream music to the ESP32.
 4. Click the laptop icon to enable or disable local Mac audio output.

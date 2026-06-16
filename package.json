@@ -1,0 +1,8 @@
+{
+  "name": "magenta-realtime-esp32",
+  "private": true,
+  "workspaces": [
+    "app/common/react_ui",
+    "app/ui"
+  ]
+}

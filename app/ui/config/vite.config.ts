@@ -33,7 +33,7 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       '@': abs('src'),
-      '@magenta-rt/common': path.resolve(__dirname, '../../../common/react_ui/index.ts'),
+      '@magenta-rt/common': path.resolve(__dirname, '../../common/react_ui/index.ts'),
     },
   },
   css: {

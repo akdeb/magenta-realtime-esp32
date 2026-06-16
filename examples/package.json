@@ -1,8 +1,0 @@
-{
-  "name": "magenta-rt-v2-examples",
-  "private": true,
-  "workspaces": [
-    "common/react_ui",
-    "collider/ui"
-  ]
-}

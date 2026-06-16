@@ -15,7 +15,7 @@
  */
 
 /**
- * Shared default parameter values for all example apps (MRT2, Jam, Collider).
+ * Shared default parameter values for Magenta Realtime ESP32 app surfaces.
  *
  * All values are native engine values — no display↔native remapping.
  * CFG params (notes, style/musiccoca, drums) range from 0 to 5.
