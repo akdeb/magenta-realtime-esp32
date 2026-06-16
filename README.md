@@ -7,9 +7,9 @@ A local-first macOS app and ESP32-S3 device that streams realtime generative mus
 [![Model](https://img.shields.io/badge/Model-Magenta%20RT%202-blue)](https://magenta.withgoogle.com/mrt2)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
 
-## Demo
-
-<img src="assets/app-view.png" alt="Magenta Realtime ESP32 app" width="100%" />
+## Demo [Demo video](https://youtu.be/eMU9PQQUm8E)
+ 
+<img width="900" height="506" alt="under10mb-final" src="https://github.com/user-attachments/assets/40d18c67-a5cd-40c6-a525-949ea56ea858" />
 
 ## Intro
 
