@@ -14,7 +14,7 @@ APPS=(
     "$APP_DIR/MRT2.app"
     "$APP_DIR/MRT2 (AU).app"
     "$APP_DIR/MRT2 - Jam.app"
-    "$APP_DIR/MRT2 - Collider.app"
+    "$APP_DIR/mr. esp32 by ELATO.app"
 )
 
 echo "Starting compression of Magenta RT apps..."

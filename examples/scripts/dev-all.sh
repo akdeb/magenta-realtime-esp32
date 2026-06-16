@@ -49,7 +49,7 @@ cleanup() {
     if ! $SERVERS_ONLY; then
         [[ "$MODE" == 0 || "$MODE" == 1 ]] && osascript -e 'quit app "MRT2"' 2>/dev/null || true
         [[ "$MODE" == 0 || "$MODE" == 2 ]] && osascript -e 'quit app "MRT2 - Jam"' 2>/dev/null || true
-        [[ "$MODE" == 0 || "$MODE" == 3 ]] && osascript -e 'quit app "MRT2 - Collider"' 2>/dev/null || true
+        [[ "$MODE" == 0 || "$MODE" == 3 ]] && osascript -e 'quit app "mr. esp32 by ELATO"' 2>/dev/null || true
     fi
     wait 2>/dev/null
     echo "Done."
@@ -96,7 +96,7 @@ if ! $SERVERS_ONLY; then
 
   [[ "$MODE" == 0 || "$MODE" == 1 ]] && launch_app "MRT2" "MRT2" "MRT2"
   [[ "$MODE" == 0 || "$MODE" == 2 ]] && launch_app "MRT2 - Jam" "MRT2 - Jam" "MRT2_Jam"
-  [[ "$MODE" == 0 || "$MODE" == 3 ]] && launch_app "MRT2 - Collider" "MRT2 - Collider" "MRT2_Collider"
+  [[ "$MODE" == 0 || "$MODE" == 3 ]] && launch_app "mr. esp32 by ELATO" "mr. esp32 by ELATO" "MRT2_Collider"
 fi
 
 echo ""

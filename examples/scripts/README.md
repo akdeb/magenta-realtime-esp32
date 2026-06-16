@@ -24,7 +24,7 @@ bash examples/scripts/build-all.sh
   * `MRT2.app` (Standalone)
   * `MRT2 (AU).app` (AUv3 Plugin Host)
   * `Jam.app`
-  * `MRT2 - Collider.app`
+  * `mr. esp32 by ELATO.app`
 * **Audio Host Externals**:
   * **Max MSP**: `mrt~.mxo` (deployed to `~/Documents/Max 9/Library`)
   * **Pure Data**: `mrt~.pd_darwin` (deployed to `~/Documents/Pd/externals/mrt~`)

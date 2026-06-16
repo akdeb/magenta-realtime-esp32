@@ -57,7 +57,7 @@ set_target_properties(mrt2_collider PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/ColliderInfo.plist.in"
     MACOSX_BUNDLE_EXECUTABLE_NAME MRT2_Collider
-    MACOSX_BUNDLE_BUNDLE_NAME "JamBox by ELATO"
+    MACOSX_BUNDLE_BUNDLE_NAME "mr. esp32 by ELATO"
     MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.google.mrt2.collider"
 )
@@ -101,16 +101,20 @@ add_custom_target(deploy_mrt2_collider
         "$ENV{HOME}/Applications/Musical AI Toys with ELATO.app"
     COMMAND ${CMAKE_COMMAND} -E remove_directory
         "$ENV{HOME}/Applications/JamBox by ELATO.app"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "$ENV{HOME}/Applications/Houseband by ELATO.app"
+    COMMAND ${CMAKE_COMMAND} -E remove_directory
+        "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
     COMMAND ditto
         "$<TARGET_BUNDLE_DIR:mrt2_collider>"
-        "$ENV{HOME}/Applications/JamBox by ELATO.app"
-    COMMENT "Building and deploying JamBox by ELATO standalone app"
+        "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
+    COMMENT "Building and deploying mr. esp32 by ELATO standalone app"
     VERBATIM
 )
 
-# Notarize the deployed JamBox by ELATO.app (requires Developer ID).
+# Notarize the deployed mr. esp32 by ELATO.app (requires Developer ID).
 magentart_add_notarize_target(notarize_mrt2_collider
-    APP "$ENV{HOME}/Applications/JamBox by ELATO.app"
+    APP "$ENV{HOME}/Applications/mr. esp32 by ELATO.app"
     DEPENDS deploy_mrt2_collider
     ZIP_NAME "MRT2_Collider.zip"
 )

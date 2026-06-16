@@ -49,7 +49,7 @@ cmake --build build --target <deploy-target> -j10
 | Audio Unit plugin | `deploy_mrt2_au`         | `~/Applications/MRT2 (AU).app`       |
 | Standalone        | `deploy_mrt2_standalone` | `~/Applications/MRT2.app`            |
 | Jam               | `deploy_mrt2_jam`        | `~/Applications/MRT2 - Jam.app`      |
-| Collider          | `deploy_mrt2_collider`   | `~/Applications/MRT2 - Collider.app` |
+| mr. esp32 by ELATO | `deploy_mrt2_collider`  | `~/Applications/mr. esp32 by ELATO.app` |
 
 Each `deploy_*` target signs the bundle with an ad-hoc signature
 (`CODESIGN_IDENTITY=-`), which is fine on your own machine. To run a build on

@@ -1,25 +1,17 @@
-<div align="center">
+# magenta-realtime-esp32
 
-<img src="assets/transparent-circle-logo.png" alt="ELATO logo" width="140" />
+### Mr. ESP32: a tiny device for Magenta RealTime 2.
 
-# JamBox
-
-### An app and gadget that brings your realtime music creations to life, powered by your Mac, Magenta RealTime, MLX, and ESP32
-
-*JamBox by ELATO is a local-first macOS app for creating realtime generative music and streaming it to an ESP32 speaker gadget. Touch the ESP32 to interrupt playback, speak a request like "add drums" or "make it lo-fi", and the Mac uses local Whisper STT plus Qwen3.5 tool calls to update the musical bubbles before resuming playback.*
-
-**Apple Silicon · Magenta RealTime 2 · MLX · React · ESP32-S3 · Whisper ASR · Qwen3.5 Tool Calls · Opus Audio**
+A local-first macOS app and ESP32-S3 device that streams realtime generative music from your Mac to anywhere in your house. Touch the ESP32, say “add drums” or “make it lo-fi,” and your Mac updates the music locally using Whisper, Qwen, MLX, and Magenta RealTime 2.
 
 [![App](https://img.shields.io/badge/App-C%2B%2B%20&React-yellow)](examples/collider)
 [![Hardware](https://img.shields.io/badge/Hardware-ESP32--S3-red?logo=espressif)](arduino)
 [![Model](https://img.shields.io/badge/Model-Magenta%20RT%202-blue)](https://magenta.withgoogle.com/mrt2)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
 
-<img src="assets/app-view.png" alt="JamBox by ELATO app" width="100%" />
+<img src="assets/app-view.png" alt="mr. esp32 by ELATO app" width="100%" />
 
-</div>
-
-## What This Is
+## Intro
 
 This repo is built on [Magenta RealTime 2](https://magenta.withgoogle.com/mrt2), an open-weights realtime music generation model. The main app in this fork is the Collider-based macOS app:
 
@@ -27,18 +19,18 @@ This repo is built on [Magenta RealTime 2](https://magenta.withgoogle.com/mrt2),
 - `arduino/`: ESP32-S3 firmware for WiFi discovery, touch interrupt, mic streaming, Opus decode, and speaker output.
 - `core/` and `magenta_rt/`: Magenta RealTime C++ and Python inference code.
 
-## Why It Is Fun
+## Why mr. esp32
 
-- **Realtime music generation**: Drag prompt bubbles around a listener puck to steer the music.
-- **ESP32 speaker mode**: Stream generated audio over websocket as Opus packets.
+- **Unlimited realtime music generation**: Drag prompt bubbles around a listener puck to steer the music.
+- **ESP32 speaker mode**: Stream generated audio over websocket as Opus packets to ESP32 devices you own.
 - **Voice interrupt**: Touch the ESP32, speak a command, and the Mac pauses music while it listens.
 - **Local STT and LLM**: Whisper transcribes locally; Qwen3.5 chooses tool calls locally.
 - **Tool-call UI actions**: The agent can call `addBubble(text, nearness)` and `removeBubble(text)`.
-- **No cloud required** once your models are downloaded.
+- **No cloud required** once your models are downloaded, mr. esp32 works locally.
 
 ## Hardware Requirements
 
-### Mac
+### MacBook
 
 Realtime generation requires Apple Silicon.
 
@@ -62,8 +54,8 @@ See [arduino/README.md](arduino/README.md) for pin notes.
 ### 1. Clone The Repo
 
 ```bash
-git clone --recurse-submodules https://github.com/akdeb/musical-ai-toys.git
-cd musical-ai-toys
+git clone --recurse-submodules https://github.com/akdeb/magenta-realtime-esp32.git
+cd magenta-realtime-esp32
 ```
 
 If you already cloned without submodules:
@@ -104,7 +96,7 @@ The app auto-loads `mrt2_base` from that folder when available. You can also pic
 
 ### 3. Download Local Voice Models
 
-The app expects these Hugging Face models in your local cache:
+To have the agentic STT and LLM layer working smoothly, the app expects these Hugging Face models in your local HF cache:
 
 - `mlx-community/whisper-base.en-mlx`
 - `mlx-community/Qwen3.5-4B-MLX-4bit`
@@ -125,13 +117,13 @@ PY
 ```bash
 cmake . -B build
 cmake --build build --target deploy_mrt2_collider -j10
-open ~/Applications/"JamBox by ELATO.app"
+open ~/Applications/"mr. esp32 by ELATO.app"
 ```
 
 The deploy target builds the React UI, signs the app locally, bundles `voice_agent.py`, and copies the app to:
 
 ```text
-~/Applications/JamBox by ELATO.app
+~/Applications/mr. esp32 by ELATO.app
 ```
 
 ## ESP32 Setup
@@ -163,7 +155,7 @@ The Mac app advertises itself over mDNS and runs the websocket server for the ES
 
 ## How To Use It
 
-1. Open `JamBox by ELATO.app`.
+1. Open `mr. esp32 by ELATO.app`.
 2. Wait for the model to load.
 3. Click the large play button to stream music to the ESP32.
 4. Click the laptop icon to enable or disable local Mac audio output.
@@ -191,65 +183,6 @@ The ESP32 firmware uses LED state to show what is happening:
 - Right instrument rail: click an instrument to add it as a music bubble.
 - Settings icon: model, timing, generation, and buffer controls.
 
-## Project Structure
-
-```text
-musical-ai-toys/
-├── arduino/                  # ESP32-S3 firmware
-├── core/                     # C++ realtime inference engine
-├── examples/
-│   ├── collider/             # JamBox by ELATO macOS app
-│   │   ├── ui/               # React UI
-│   │   └── voice_agent.py    # Whisper + Qwen3.5 tool-call loop
-│   ├── common/               # Shared native/React app code
-│   └── hello_mrt2/           # Minimal CLI generation example
-├── magenta_rt/               # Python package
-├── docs/                     # Original Magenta RT docs
-└── README.md
-```
-
-## Troubleshooting
-
-### App opens but no model loads
-
-Run:
-
-```bash
-mrt models init
-mrt models download
-```
-
-Then reopen the app or choose the model folder from settings.
-
-### ESP32 cannot find the server
-
-- Make sure the Mac and ESP32 are on the same WiFi network.
-- Open the macOS app before powering/reconnecting the ESP32.
-- Check that no firewall is blocking local network traffic.
-- Watch `pio device monitor` for mDNS and websocket logs.
-
-### Whisper works but no tool call happens
-
-Make sure Qwen3.5 is cached:
-
-```bash
-python3 - <<'PY'
-from huggingface_hub import snapshot_download
-snapshot_download("mlx-community/Qwen3.5-4B-MLX-4bit", local_files_only=True)
-print("Qwen3.5 is cached")
-PY
-```
-
-### App crashes during startup
-
-Rebuild the latest app:
-
-```bash
-cmake --build build --target deploy_mrt2_collider -j10
-```
-
-The app queues prompt updates while the model is loading, which avoids racing React startup messages with native MLX model initialization.
-
 ## Stack
 
 - Music model: Magenta RealTime 2
@@ -267,7 +200,7 @@ This is an experimental local AI music toy platform. The local LLM can misunders
 
 ## Upstream Credits
 
-This project builds on Google Magenta's [Magenta RealTime 2](https://github.com/magenta/magenta-realtime) and the open MLX ecosystem.
+This project builds on Google Magenta's [Magenta RealTime 2](https://github.com/magenta/magenta-realtime) and the open MLX ecosystem. Check out their amazing work!
 
 ## License
 

@@ -910,7 +910,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     [c addSubview:midiHeader];
     y -= 20;
 
-    _midiVirtualLabel = [NSTextField labelWithString:@"Virtual port: MRT2 - Collider Input"];
+    _midiVirtualLabel = [NSTextField labelWithString:@"Virtual port: mr. esp32 Input"];
     _midiVirtualLabel.frame = NSMakeRect(pad, y, 400, 16);
     _midiVirtualLabel.font = [NSFont systemFontOfSize:10];
     _midiVirtualLabel.textColor = [NSColor tertiaryLabelColor];
@@ -1246,7 +1246,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
                                                     NSWindowStyleMaskResizable
                                             backing:NSBackingStoreBuffered
                                               defer:NO];
-    _window.title = @"JamBox by ELATO";
+    _window.title = @"mr. esp32 by ELATO";
     _window.restorable = NO;
     _window.contentMinSize = NSMakeSize(310, 310);
     _window.contentViewController = _controller;
@@ -1382,7 +1382,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     ColliderSharedState* shared = &_sharedState;
 
     OSStatus status = MIDIClientCreateWithBlock(
-        CFSTR("Musical Toys"),
+        CFSTR("mr. esp32"),
         &_midiClient,
         ^(const MIDINotification* notification) {
             if (notification->messageID == kMIDIMsgSetupChanged) {
@@ -1395,7 +1395,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     if (status != noErr) { NSLog(@"Collider: MIDIClientCreate failed: %d", (int)status); return; }
 
     status = MIDIInputPortCreateWithProtocol(
-        _midiClient, CFSTR("MRT2 - Collider In"), kMIDIProtocol_1_0, &_midiInputPort,
+        _midiClient, CFSTR("mr. esp32 In"), kMIDIProtocol_1_0, &_midiInputPort,
         ^(const MIDIEventList* evtList, void* srcConnRefCon) {
             const MIDIEventPacket* pkt = &evtList->packet[0];
             for (UInt32 i = 0; i < evtList->numPackets; ++i) {
@@ -1423,7 +1423,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     if (status != noErr) { NSLog(@"Collider: MIDIInputPortCreate failed: %d", (int)status); return; }
 
     status = MIDIDestinationCreateWithProtocol(
-        _midiClient, CFSTR("MRT2 - Collider Input"), kMIDIProtocol_1_0, &_midiVirtualDest,
+        _midiClient, CFSTR("mr. esp32 Input"), kMIDIProtocol_1_0, &_midiVirtualDest,
         ^(const MIDIEventList* evtList, void* srcConnRefCon) {
             const MIDIEventPacket* pkt = &evtList->packet[0];
             for (UInt32 i = 0; i < evtList->numPackets; ++i) {
@@ -1460,11 +1460,11 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
     NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
     NSMenu* appMenu = [[NSMenu alloc] init];
-    [appMenu addItemWithTitle:@"About JamBox by ELATO" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+    [appMenu addItemWithTitle:@"About mr. esp32 by ELATO" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Settings..." action:@selector(menuShowSettings:) keyEquivalent:@","];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit JamBox by ELATO" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:@"Quit mr. esp32 by ELATO" action:@selector(terminate:) keyEquivalent:@"q"];
     appMenuItem.submenu = appMenu;
     [menuBar addItem:appMenuItem];
 
