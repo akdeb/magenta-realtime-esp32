@@ -600,7 +600,7 @@ function App() {
 
   return (
     <div className="collider-app-shell">
-      <div className="elato-wordmark">Magenta Realtime ESP32</div>
+      <div className="elato-wordmark">Elato Music</div>
 
       {/* Transport: bottom left */}
       <div className="transport-dock">
@@ -768,22 +768,13 @@ function App() {
         </div>
       )}
 
-      {/* ── Bottom bar ── */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: 'var(--app-padding)', paddingRight: 'calc(var(--app-padding) + var(--instrument-rail-width) + 16px)', flexShrink: 0, gap: '12px', position: 'relative', justifyContent: 'flex-end' }}>
-        {/* Speed slider: absolute, aligned to the right of the bar (left of Add Prompt) */}
+      {/* ── Speed controls ── */}
+      <div className="speed-control-zone" aria-hidden={!hasThrown}>
         <div
           className={`speed-slider-dock${hasThrown ? ' visible' : ''}`}
           style={{
-            position: 'absolute',
-            bottom: 'calc(var(--app-padding) + 1px)',
-            right: 'calc(var(--instrument-rail-width) + 116px)',
             transform: hasThrown ? 'translateY(0)' : 'translateY(200%)',
-            maxWidth: '260px',
-            width: '100%',
-            zIndex: 10,
             pointerEvents: hasThrown ? 'auto' : 'none',
-            display: 'flex',
-            alignItems: 'center',
           }}
         >
           <Tooltip title={collisionsEnabled ? "Collisions enabled" : "Collisions disabled"}>

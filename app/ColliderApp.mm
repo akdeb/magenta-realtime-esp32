@@ -1259,7 +1259,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
                                                     NSWindowStyleMaskResizable
                                             backing:NSBackingStoreBuffered
                                               defer:NO];
-    _window.title = @"Magenta Realtime ESP32";
+    _window.title = @"Magenta Realtime ESP32 by ELATO";
     _window.restorable = NO;
     _window.contentMinSize = NSMakeSize(310, 310);
     _window.contentViewController = _controller;
@@ -1473,11 +1473,11 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 
     NSMenuItem* appMenuItem = [[NSMenuItem alloc] init];
     NSMenu* appMenu = [[NSMenu alloc] init];
-    [appMenu addItemWithTitle:@"About Magenta Realtime ESP32" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
+    [appMenu addItemWithTitle:@"About Magenta Realtime ESP32 by ELATO" action:@selector(orderFrontStandardAboutPanel:) keyEquivalent:@""];
     [appMenu addItem:[NSMenuItem separatorItem]];
     [appMenu addItemWithTitle:@"Settings..." action:@selector(menuShowSettings:) keyEquivalent:@","];
     [appMenu addItem:[NSMenuItem separatorItem]];
-    [appMenu addItemWithTitle:@"Quit Magenta Realtime ESP32" action:@selector(terminate:) keyEquivalent:@"q"];
+    [appMenu addItemWithTitle:@"Quit Magenta Realtime ESP32 by ELATO" action:@selector(terminate:) keyEquivalent:@"q"];
     appMenuItem.submenu = appMenu;
     [menuBar addItem:appMenuItem];
 

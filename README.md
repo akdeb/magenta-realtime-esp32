@@ -116,13 +116,13 @@ PY
 ```bash
 cmake . -B build
 cmake --build build --target deploy_mrt2_collider -j10
-open ~/Applications/"Magenta Realtime ESP32.app"
+open ~/Applications/"Magenta Realtime ESP32 by ELATO.app"
 ```
 
 The deploy target builds the React UI, signs the app locally, bundles `voice_agent.py`, and copies the app to:
 
 ```text
-~/Applications/Magenta Realtime ESP32.app
+~/Applications/Magenta Realtime ESP32 by ELATO.app
 ```
 
 ## ESP32 Setup
@@ -154,7 +154,7 @@ The Mac app advertises itself over mDNS and runs the websocket server for the ES
 
 ## How To Use It
 
-1. Open `Magenta Realtime ESP32.app`.
+1. Open `Magenta Realtime ESP32 by ELATO.app`.
 2. Wait for the model to load.
 3. Click the large play button to stream music to the ESP32.
 4. Click the laptop icon to enable or disable local Mac audio output.

@@ -143,6 +143,17 @@
   pointer-events: none;
 }
 
+.speed-control-zone {
+  position: fixed;
+  right: calc(var(--app-padding) + var(--instrument-rail-width) + 24px);
+  bottom: calc(var(--app-padding) + 10px);
+  z-index: 10;
+  width: clamp(250px, 28vw, 330px);
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
 .voice-chat-dock {
   position: fixed;
   left: max(200px, calc(var(--app-padding) + 190px));
