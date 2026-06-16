@@ -1,13 +1,13 @@
 # magenta-realtime-esp32
 
-### Magenta Realtime ESP32: a tiny device for Magenta RealTime 2.
-
 A local-first macOS app and ESP32-S3 device that streams realtime generative music from your Mac to anywhere in your house. Touch the ESP32, say “add drums” or “make it lo-fi,” and your Mac updates the music locally using Whisper, Qwen, MLX, and Magenta RealTime 2.
 
 [![App](https://img.shields.io/badge/App-C%2B%2B%20&React-yellow)](app)
 [![Hardware](https://img.shields.io/badge/Hardware-ESP32--S3-red?logo=espressif)](arduino)
 [![Model](https://img.shields.io/badge/Model-Magenta%20RT%202-blue)](https://magenta.withgoogle.com/mrt2)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](LICENSE)
+
+## Demo
 
 <img src="assets/app-view.png" alt="Magenta Realtime ESP32 app" width="100%" />
 
