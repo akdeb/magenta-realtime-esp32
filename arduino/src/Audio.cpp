@@ -253,11 +253,11 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     {
     case WStype_DISCONNECTED:
         Serial.printf("[WSc] Disconnected!\n");
-        deviceState = SOFT_AP;
+        deviceState = apStationConnected ? AP_CONNECTED : SOFT_AP;
         break;
     case WStype_CONNECTED:
         Serial.printf("[WSc] Connected to url: %s\n", payload);
-        deviceState = PROCESSING;
+        deviceState = AP_CONNECTED;
         break;
     case WStype_TEXT:
     {
@@ -309,8 +309,14 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 
             if (strcmp((char*)msg.c_str(), "RESPONSE.COMPLETE") == 0 || strcmp((char*)msg.c_str(), "RESPONSE.ERROR") == 0) {
                 Serial.println("Received RESPONSE.COMPLETE or RESPONSE.ERROR, starting listening again");
-                scheduleListeningRestart = true;
-                scheduledTime = millis() + 1000; // 1 second delay
+                bool keepListening = doc["keep_listening"] | true;
+                if (keepListening) {
+                    scheduleListeningRestart = true;
+                    scheduledTime = millis() + 1000; // 1 second delay
+                } else {
+                    scheduleListeningRestart = false;
+                    deviceState = AP_CONNECTED;
+                }
             } else if (strcmp((char*)msg.c_str(), "AUDIO.COMMITTED") == 0) {
                 deviceState = PROCESSING;
             } else if (strcmp((char*)msg.c_str(), "VOLUME.UPDATE") == 0) {

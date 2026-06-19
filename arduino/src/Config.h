@@ -13,6 +13,7 @@ enum DeviceState
     SETUP,
     IDLE,
     SOFT_AP,
+    AP_CONNECTED,
     LISTENING,
     SPEAKING,
     PROCESSING,
@@ -22,6 +23,7 @@ enum DeviceState
 };
 
 extern volatile DeviceState deviceState;
+extern volatile bool apStationConnected;
 
 extern String authTokenGlobal;
 

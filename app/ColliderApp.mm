@@ -115,6 +115,7 @@ static float SoftLimitFloatForPCM(float y) {
 - (void)suspendStreamingForVoiceCommand;
 - (void)pushLeft:(const float*)left right:(const float*)right count:(AVAudioFrameCount)count;
 - (void)sendServerMessage:(NSString*)message;
+- (void)sendServerMessage:(NSString*)message keepListening:(BOOL)keepListening;
 // Stores the volume, persists it, and pushes a VOLUME.UPDATE message to the device.
 - (void)setEsp32Volume:(int)volumePercent;
 @end
@@ -417,7 +418,7 @@ static float SoftLimitFloatForPCM(float y) {
         [self sendServerMessage:@"RESPONSE.CREATED"];
         NSLog(@"Collider: ESP32 speaker stream enabled");
     } else {
-        [self sendServerMessage:@"AUDIO.COMMITTED"];
+        [self sendServerMessage:@"RESPONSE.COMPLETE" keepListening:NO];
         NSLog(@"Collider: ESP32 speaker stream disabled");
     }
 }
@@ -636,6 +637,18 @@ static float SoftLimitFloatForPCM(float y) {
         @"type": @"server",
         @"msg": message,
         @"volume_control": @(_esp32Volume.load(std::memory_order_acquire))
+    };
+    NSData* json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
+    if (!json) return;
+    [self sendWebSocketFrameOpcode:0x1 bytes:(const uint8_t*)json.bytes length:json.length];
+}
+
+- (void)sendServerMessage:(NSString*)message keepListening:(BOOL)keepListening {
+    NSDictionary* payload = @{
+        @"type": @"server",
+        @"msg": message,
+        @"volume_control": @(_esp32Volume.load(std::memory_order_acquire)),
+        @"keep_listening": @(keepListening)
     };
     NSData* json = [NSJSONSerialization dataWithJSONObject:payload options:0 error:nil];
     if (!json) return;
@@ -1347,7 +1360,7 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
             [self->_controller sendStateUpdate:@{@"speakerStreaming": @YES, @"voiceStatus": @"idle"}];
         });
     } else {
-        [_audioWebSocketStreamer sendServerMessage:@"AUDIO.COMMITTED"];
+        [_audioWebSocketStreamer sendServerMessage:@"RESPONSE.COMPLETE" keepListening:NO];
         [self updateEngineBypassForOutputStateTriggeringReset:NO];
         [_controller sendStateUpdate:@{@"voiceStatus": @"idle"}];
     }
@@ -1543,6 +1556,9 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
     if (_isPlaying) {
         _isPlaying = NO;
         _playStopMenuItem.title = @"Play";
+        // Tell the ESP32 the turn is over so it leaves PROCESSING/LISTENING and
+        // shows the idle (white) LED instead of getting stuck on green.
+        [_audioWebSocketStreamer sendServerMessage:@"RESPONSE.COMPLETE" keepListening:NO];
     } else {
         _isPlaying = YES;
         _playStopMenuItem.title = @"Pause";
