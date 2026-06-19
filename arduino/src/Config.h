@@ -5,9 +5,6 @@
 #include <ArduinoJson.h>
 #include <driver/i2s.h>
 #include <Preferences.h>
-#include <HTTPClient.h>
-#include <WiFiClientSecure.h>
-#include <WebSocketsClient.h>
 
 extern Preferences preferences;
 
@@ -26,24 +23,16 @@ enum DeviceState
 
 extern volatile DeviceState deviceState;
 
-// WiFi credentials
-extern const char *EAP_IDENTITY;
-extern const char *EAP_USERNAME;
-extern const char *EAP_PASSWORD;
-extern const char *ssid;
-
-extern const char *ssid_peronal;
-extern const char *password_personal;
-
 extern String authTokenGlobal;
 
+// Direct ESP32 AP mode. The ESP32 creates this open access point; the Mac joins
+// it and the firmware reads the Mac IP from the AP station table.
+extern const char *device_ap_ssid;
+
 // WebSocket server details
-extern String ws_server_ip;  // Dynamically discovered via mDNS
+extern String ws_server_ip;
 extern const uint16_t ws_port;
 extern const char *ws_path;
-
-// mDNS discovery
-bool discoverElatoServer(String &outIp, uint16_t &outPort, int timeoutMs = 10000);
 
 // I2S and Audio parameters
 extern const uint32_t SAMPLE_RATE;
@@ -72,10 +61,6 @@ extern const int I2S_BCK_OUT;
 extern const int I2S_DATA_OUT;
 extern const i2s_port_t I2S_PORT_OUT;
 extern const int I2S_SD_OUT;
-
-// SSL certificate
-extern const char *CA_cert;
-extern const char *Vercel_CA_cert;
 
 extern volatile bool sleepRequested;
 

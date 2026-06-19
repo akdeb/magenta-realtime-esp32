@@ -146,11 +146,11 @@ pio run -t upload -t monitor
 
 The monitor runs at `115200`.
 
-### 3. Connect ESP32 To WiFi
+### 3. Connect Mac To ESP32
 
-On first boot, the device exposes a WiFi setup portal. Connect to the ELATO access point, enter your WiFi credentials, and put the ESP32 on the same network as the Mac.
+On boot, the ESP32 creates an open WiFi network named `ELATO`. Connect your Mac to `ELATO` from the macOS WiFi menu.
 
-The Mac app advertises itself over mDNS and runs the websocket server for the ESP32. Keep the app open while powering or reconnecting the device.
+No DNS, captive portal, WiFi password, or saved WiFi credentials are used. The Mac app remains the Magenta music server, and the ESP32 remains the websocket client.
 
 ## How To Use It
 
@@ -169,10 +169,10 @@ The Mac app advertises itself over mDNS and runs the websocket server for the ES
 ## Status Colors
 
 The ESP32 firmware uses LED state to show what is happening:
-
-- Green / processing: connected, waiting, or agent is thinking.
-- Yellow / listening: mic is streaming to the Mac.
-- Blue / speaking: ESP32 speaker is playing generated audio.
+- ⚪️ White / start: init state, finding Mac IP
+- 🟢 Green / processing: connected, waiting, or agent is thinking.
+- 🟡 Yellow / listening: mic is streaming to the Mac.
+- 🔵 Blue / speaking: ESP32 speaker is playing generated audio.
 
 ## App Controls
 

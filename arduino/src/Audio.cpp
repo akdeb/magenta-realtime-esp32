@@ -253,7 +253,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     {
     case WStype_DISCONNECTED:
         Serial.printf("[WSc] Disconnected!\n");
-        deviceState = IDLE;
+        deviceState = SOFT_AP;
         break;
     case WStype_CONNECTED:
         Serial.printf("[WSc] Connected to url: %s\n", payload);
@@ -365,13 +365,17 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     }
 }
 
-// wifiTask -> WIFIMANAGER::loop() -> WIFIMANAGER::tryConnect() -> connectCb() -> websocketSetup()
+// wifiStationTask() reads the Mac IP from the ESP32 AP station table and starts this client.
 void websocketSetup(const String& server_domain, int port, const String& path)
 {
     // Include both auth token and client type header
     String headers = "Authorization: Bearer " + String(authTokenGlobal);
 
     xSemaphoreTake(wsMutex, portMAX_DELAY);
+
+    if (webSocket.isConnected()) {
+        webSocket.disconnect();
+    }
 
     webSocket.setExtraHeaders(headers.c_str());
     webSocket.onEvent(webSocketEvent);

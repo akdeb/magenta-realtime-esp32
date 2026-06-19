@@ -1,6 +1,6 @@
 # ESP32 WebSocket Audio Client
 
-This firmware turns your Seed Studio XIAO ESP32-S3 (or general ESP32 WROOM Dev module) device into a WebSocket audio client, enabling real-time full-duplex audio communication with the server hosted at `../backend`. It's designed to be used in interactive toys or devices to converse with your personal AI characters.
+This firmware turns your ESP32-S3 into the Magenta Realtime ESP32 audio client. The ESP32 creates an open WiFi access point named `ELATO`; join that network from your Mac, keep the macOS app running, and the device connects to the app over websocket.
 
 ## Pin Configuration
 
@@ -59,85 +59,37 @@ This firmware turns your Seed Studio XIAO ESP32-S3 (or general ESP32 WROOM Dev m
           -   LED: GPIO 2
           -   Button: GPIO 26 -->
 
-## Firmware burning with PlatformIO
+## Firmware With PlatformIO
 
-1. Install PlatformIO IDE (Visual Studio Code extension) if you haven't already.
+1. Install PlatformIO IDE (Visual Studio Code extension), or install the CLI:
 
-2. Create a new PlatformIO project:
+   ```bash
+   python3 -m pip install platformio
+   ```
 
-    - Open PlatformIO Home
-    - Click "New Project"
-    - Name your project (e.g., "FullDuplexWebSocketAudio")
-    - Select "Espressif ESP32 Dev Module" as the board
-    - Choose "Arduino" as the framework
-    - Select a location for your project
+2. Build the firmware from this folder:
 
-3. Replace the contents of `src/main.cpp` with the provided ESP32 WebSocket Audio Client code.
+   ```bash
+   pio run
+   ```
 
-4. Add the required libraries to your `platformio.ini` file:
+3. Upload and monitor:
 
-   - For Seeed Studio XIAO ESP32S3
+   ```bash
+   pio run -t upload -t monitor
+   ```
 
-       ```ini
-       [env:seeed_xiao_esp32s3]
-       platform = espressif32
-       board = seeed_xiao_esp32s3
-       framework = arduino
-       monitor_speed = 115200
-       lib_deps =
-           https://github.com/tzapu/WiFiManager.git
-           gilmaimon/ArduinoWebsockets@^0.5.4
-           bblanchon/ArduinoJson@^7.1.0
-       ```
-
-   - For a general ESP32 Dev board
-       ```ini
-       [env:esp32dev]
-       platform = espressif32
-       board = esp32dev
-       framework = arduino
-       monitor_speed = 115200
-       lib_deps =
-           https://github.com/tzapu/WiFiManager.git
-           gilmaimon/ArduinoWebsockets @ ^0.5.3
-           bblanchon/ArduinoJson @ ^7.1.0
-       ```
-       
-5. Update the WebSocket server details in the code:
-
-    - Find the following lines in the code and update them with your information:
-        ```cpp
-        const char *websocket_server_host = "<your-server-host>"; // this is your WiFi I.P. Address
-        const uint16_t websocket_server_port = 49320;
-        const char *websocket_server_path = "/Elato";
-        ```
-
-6. Build the project:
-
-    - Click the "PlatformIO: Build" button in the PlatformIO toolbar or run the build task.
-
-7. Upload the firmware:
-
-    - Connect your ESP32 to your computer.
-    - Click the "PlatformIO: Upload" button or run the upload task.
-
-8. Monitor the device:
-
-    - Open the Serial Monitor to view debug output and device status.
-    - You can do this by clicking the "PlatformIO: Serial Monitor" button or running the monitor task.
-
-9. Connect to WiFi using the WiFi Captive portal
-    - It is straightforward to connect to your local Wifi network with an SSID (WiFi name) and Password.
-    - Once the device is on, it acts as an Access Point to connect to a known WiFi network.
-    - Find the device name "Elato device" in your list of local wifi networks.
-    - Press "Configure Wifi" and type in your SSID and PW for your Wifi and connect.
-    - The Seeed Stuido XIAO ESP32S3 should then automatically connect to your Wifi and save your Wifi details.
+4. Connect the Mac to the ESP32:
+   - Power on the ESP32.
+   - Open the WiFi menu on your Mac and join `ELATO`.
+   - No DNS, captive portal, WiFi password, or saved WiFi credentials are used.
+   - Keep the macOS app open; it remains the Magenta music server.
 
 ## Usage
 
 1. Power on the ESP32 device.
-2. The device will automatically connect to the WiFi network as set on the Captive portal.
-3. Press the button to initiate a full-duplex WebSocket connection to the server.
+2. Join the `ELATO` WiFi network from your Mac.
+3. The ESP32 websocket client reconnects until it reaches the macOS app server.
 4. The LED indicates the current status:
 
     - Off: Not connected
@@ -184,7 +136,7 @@ You can modify the following parameters in the code:
 
 ## Troubleshooting
 
--   If you experience connection issues, check your WiFi credentials and server details.
+-   If you experience connection issues, make sure the Mac is connected to `ELATO` and the macOS app is open.
 -   Ensure all required libraries are installed and up to date.
 -   Verify that the pin configuration matches your hardware setup.
 
