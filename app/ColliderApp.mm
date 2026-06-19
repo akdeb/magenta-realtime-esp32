@@ -100,6 +100,7 @@ static float SoftLimitFloatForPCM(float y) {
 
 @protocol ColliderAudioWebSocketStreamerDelegate <NSObject>
 - (void)colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:(NSData*)data;
+- (void)colliderAudioWebSocketStreamerDidReceiveInterrupt;
 @end
 
 @interface ColliderAudioWebSocketStreamer : NSObject <NSNetServiceDelegate>
@@ -554,6 +555,18 @@ static float SoftLimitFloatForPCM(float y) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [delegate colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:copy];
                 });
+            }
+        } else if (opcode == 0x1 && payload.length > 0) {
+            NSDictionary* json = [NSJSONSerialization JSONObjectWithData:payload options:0 error:nil];
+            if ([json isKindOfClass:[NSDictionary class]] &&
+                [json[@"type"] isEqualToString:@"instruction"] &&
+                [json[@"msg"] isEqualToString:@"INTERRUPT"]) {
+                id delegate = self.delegate;
+                if ([delegate respondsToSelector:@selector(colliderAudioWebSocketStreamerDidReceiveInterrupt)]) {
+                    dispatch_async(dispatch_get_main_queue(), ^{
+                        [delegate colliderAudioWebSocketStreamerDidReceiveInterrupt];
+                    });
+                }
             }
         } else if (opcode == 0x8) {
             int old = _clientFd.exchange(-1, std::memory_order_acq_rel);
@@ -1300,6 +1313,10 @@ static NSSlider* makeSlider(CGFloat x, CGFloat y, CGFloat w, double min, double 
 - (void)colliderAudioWebSocketStreamerDidReceiveMicrophoneAudio:(NSData*)data {
     [self enterVoiceCommandModeIfNeeded];
     [_voiceAgent pushPCM16Audio:data];
+}
+
+- (void)colliderAudioWebSocketStreamerDidReceiveInterrupt {
+    [self enterVoiceCommandModeIfNeeded];
 }
 
 - (void)voiceAgentDidStartSpeech {
